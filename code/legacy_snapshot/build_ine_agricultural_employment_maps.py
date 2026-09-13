@@ -152,7 +152,7 @@ def primary_pair(geo: gpd.GeoDataFrame, national_density: float) -> Path:
     fig, axes = plt.subplots(1, 2, figsize=(9.0, 5.85), facecolor="white")
     share_handles = draw_map(
         axes[0], geo, "agricultural_share_pct", SHARE_BINS, SHARE_LABELS,
-        "a. Agricultura como proporción de la población ocupada\nCenso 2018 | Nacional: 28,0% (1.393.220 de 4.971.427)", 
+        "a. Agricultura como proporción de la población ocupada\nCenso 2018 | Nacional: 28,0% (1.393.220 de 4.971.427)",
     )
     density_handles = draw_map(
         axes[1], geo, "agricultural_density_per_km2", DENSITY_BINS, DENSITY_LABELS,
