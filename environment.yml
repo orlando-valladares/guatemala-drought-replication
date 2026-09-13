@@ -1,0 +1,15 @@
+name: guatemala-drought-replication
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - geopandas
+  - rasterio
+  - shapely
+  - pyproj
+  - numpy
+  - pandas
+  - matplotlib
+  - pillow
+  - pyyaml
+  - pip

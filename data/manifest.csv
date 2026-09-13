@@ -1,0 +1,9 @@
+data_id,package_location,access,required_file_or_folder,current_provenance,redistribution_status,notes
+municipal_boundaries,data/reference/,public-source-to-verify,munis.json,Guatemala TopoJSON municipal source,verify-license,340 analytical municipalities after lake/Belize exclusions
+chirps_historical,data/raw/chirps/,official-download,GT_CHIRPSv3_MayAug_1981_2025.tif,CHIRPS v3 historical May--August annual-band raster,confirm-terms,45 bands for 1981--2025
+chirps_2026_final,data/raw/chirps/2026/final_monthly/,official-download,chirps-v3.0.2026.05.tif through chirps-v3.0.2026.08.tif,CHIRPS v3 final monthly rasters,confirm-terms,Four final monthly inputs
+ine_employment,data/raw/ine/,official-download,censo2018_cuadro_A12_2_municipios.csv,INE Censo 2018 cuadro A12.2,verify-license,municipal agricultural workers and total occupied population
+maga_land_use,data/raw/maga/,official-download-or-archive,SHP_cobertura_vegetal_y_uso_de_la_tierra_2025.shp,MAGA 2025 coverage/use polygons,do-not-commit-before-review,large source shapefile; used for mapped agricultural hectares
+oxfam_losses,data/raw/oxfam/,citation-or-permission-needed,source-to-be-confirmed,author-supplied department loss percentages,do-not-release-until-cited,not included in supplied derived checkpoints
+enigh,data/raw/enigh/,restricted-or-official-access,ENIGH 2021-2022,INE household microdata,do-not-commit,not required for the core drought/exposure table
+msps_sesan,data/raw/sesan/,source-to-be-decoupled,corredor_seco_160.csv,legacy cross-project SESAN indicator,do-not-commit,replace the current cross-project dependency with a documented small input

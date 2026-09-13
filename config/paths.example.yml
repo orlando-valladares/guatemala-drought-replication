@@ -1,0 +1,10 @@
+# Copy to config/paths.yml and set only local, non-versioned paths.
+raw_root: /absolute/path/to/guatemala-drought-raw
+output_root: outputs
+
+# Expected source locations below raw_root.
+municipal_boundaries: boundaries/munis.json
+chirps_historical: chirps/GT_CHIRPSv3_MayAug_1981_2025.tif
+chirps_2026_final_monthly: chirps/2026/final_monthly
+ine_employment: ine/censo2018_cuadro_A12_2_municipios.csv
+maga_land_use: maga/SHP_cobertura_vegetal_y_uso_de_la_tierra_2025.shp

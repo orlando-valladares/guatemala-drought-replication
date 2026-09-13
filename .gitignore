@@ -1,0 +1,26 @@
+# Raw or licensed inputs are supplied/downloaded outside Git.
+data/raw/**
+!data/raw/.gitkeep
+data/reference/**
+!data/reference/README.md
+
+# Generated results and local environments
+outputs/figures/**
+!outputs/figures/.gitkeep
+outputs/tables/**
+!outputs/tables/.gitkeep
+.venv/
+__pycache__/
+*.py[cod]
+
+# Geospatial data and TeX products should not enter Git accidentally
+*.tif
+*.tiff
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.aux
+*.log
+*.pdf
