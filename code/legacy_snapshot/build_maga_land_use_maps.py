@@ -59,7 +59,7 @@ def aggregate(g):
 def handles(labels):
     return [Patch(facecolor=c,edgecolor='#111111',linewidth=.45,label=l) for l,c in zip(labels,GREEN,strict=True)]+[Line2D([0],[0],marker='*',color='white',markerfacecolor='#111111',markeredgecolor='white',markersize=7.8,label='Ciudad de Guatemala')]
 
-def draw(ax,g,var,bins,labels,title,head=11,department_borders=False):
+def draw(ax,g,var,bins,labels,title,head=11,department_borders=True):
     g=g.assign(_class=pd.cut(g[var],bins=bins,labels=labels,include_lowest=True,ordered=True))
     for label,color in zip(labels,GREEN,strict=True): g.loc[g._class.eq(label)].plot(ax=ax,color=color,edgecolor='#111111',linewidth=.16,zorder=1)
     if department_borders:
@@ -74,7 +74,7 @@ def save(fig,pdf,png=None,copy=False):
     if copy: OVERLEAF.mkdir(parents=True,exist_ok=True); shutil.copy2(pdf,OVERLEAF/pdf.name)
     plt.close(fig)
 
-def main_map(g,var,bins,labels,title,legend,stem,*,department_borders=False,destination=None):
+def main_map(g,var,bins,labels,title,legend,stem,*,department_borders=True,destination=None):
     fig,ax=plt.subplots(figsize=(6.1,6.35),facecolor='white'); draw(ax,g,var,bins,labels,title,department_borders=department_borders)
     leg=ax.legend(handles=handles(labels),title=legend,loc='lower left',fontsize=9.65,title_fontsize=9.65,frameon=False,ncol=3,columnspacing=.7,labelspacing=.35,handlelength=1.05); leg._legend_box.align='left'
     fig.subplots_adjust(left=.025,right=.975,top=.91,bottom=.025)
@@ -84,23 +84,30 @@ def main_map(g,var,bins,labels,title,legend,stem,*,department_borders=False,dest
         save(fig,destination)
 
 def department(m):
-    d=m.assign(key=m.Departamento.map(norm)).groupby(['key','Departamento'],as_index=False).agg(agricultural_land_ha=('agricultural_land_ha','sum'),maize_bean_ha=('maize_bean_ha','sum'),agricultural_workers=('A','sum'),total_workers=('total','sum'))
-    d['ag_workers_per_100_agricultural_ha']=100*d.agricultural_workers/d.agricultural_land_ha; d['agricultural_share_pct']=100*d.agricultural_workers/d.total_workers
-    s=pd.read_csv(APP/'chirps_shock_comparison_department_common_reference.csv'); s['key']=s.department.map(norm)
-    d=d.merge(s[['key','rain_2026_mm','hist_mean_mm','hist_median_mm','hist_sd_mm','z_2015_common','z_2026_common']],on='key',validate='one_to_one')
-    d['drought_severity_negative_z']=np.maximum(-d.z_2026_common,0)
-    d['drought_severity_negative_z_2015']=np.maximum(-d.z_2015_common,0)
-    d['impact_composite']=d.ag_workers_per_100_agricultural_ha*d.drought_severity_negative_z
-    d['impact_composite_2015']=d.ag_workers_per_100_agricultural_ha*d.drought_severity_negative_z_2015
-    # Dependence is a worker share (0--1), unlike the land index, which uses
-    # workers per 100 mapped agricultural hectares. Percentile ranks make a
-    # unit-free, equally weighted combined ranking possible.
-    d['impact_agricultural_dependence']=d.drought_severity_negative_z*(d.agricultural_share_pct/100)
-    d['impact_composite_percentile']=100*d.impact_composite.rank(method='average',pct=True)
-    d['impact_agricultural_dependence_percentile']=100*d.impact_agricultural_dependence.rank(method='average',pct=True)
-    d['impact_two_channel_composite']=0.5*(d.impact_composite_percentile+d.impact_agricultural_dependence_percentile)
+    # Departmental employment, land coverage, hazard, and exposure components.
+    d=(m.assign(key=m.Departamento.map(norm))
+         .groupby(['key','Departamento'],as_index=False)
+         .agg(agricultural_land_ha=('agricultural_land_ha','sum'),
+              maize_bean_ha=('maize_bean_ha','sum'),
+              agricultural_workers=('A','sum'),
+              total_workers=('total','sum')))
+    d['ag_workers_per_100_agricultural_ha']=100*d.agricultural_workers/d.agricultural_land_ha
+    d['agricultural_share_pct']=100*d.agricultural_workers/d.total_workers
+    s=pd.read_csv(APP/'chirps_shock_comparison_department_common_reference.csv')
+    s['key']=s.department.map(norm)
+    d=d.merge(s[['key','rain_2026_mm','hist_mean_mm','hist_median_mm','hist_sd_mm',
+                 'z_2015_common','z_2026_common']],on='key',validate='one_to_one')
+    # H is physical drought hazard. d and p are empirical percentiles (0--100)
+    # within the table's geographical level; E gives each structural channel equal weight.
+    d['H_2026']=np.maximum(-d.z_2026_common,0)
+    d['H_2015']=np.maximum(-d.z_2015_common,0)
+    d['d_i_dependency_pctile']=100*d.agricultural_share_pct.rank(method='average',pct=True)
+    d['p_i_land_worker_pctile']=100*d.ag_workers_per_100_agricultural_ha.rank(method='average',pct=True)
+    d['E_i_structural_exposure']=0.5*(d.d_i_dependency_pctile+d.p_i_land_worker_pctile)
+    d['C_i_impact_2026']=d.H_2026*d.E_i_structural_exposure
+    d['C_i_impact_2015']=d.H_2015*d.E_i_structural_exposure
     d['oxfam_households_with_losses_pct']=d.key.map(OXFAM)
-    return d.sort_values(['impact_composite','Departamento'],ascending=[False,True]).reset_index(drop=True)
+    return d.sort_values(['C_i_impact_2026','Departamento'],ascending=[False,True]).reset_index(drop=True)
 
 LAND_LEVEL1 = [
     ('1. Territorios artificializados', '#bdbdbd', 'Territorios artificializados'),
@@ -145,7 +152,7 @@ def raw_polygons(target_crs):
     if u.crs is None: raise ValueError('MAGA display geometry has no CRS')
     return u.to_crs(target_crs)
 
-def raw_draw(ax,u,g,kind,title,*,department_borders=False):
+def raw_draw(ax,u,g,kind,title,*,department_borders=True):
     """Draw source polygons, never an aggregation to municipality."""
     if kind=='land_cover':
         for value,color,label in LAND_LEVEL1:
@@ -175,14 +182,14 @@ def raw_draw(ax,u,g,kind,title,*,department_borders=False):
     ax.set_axis_off(); ax.set_aspect('equal')
     return legend+[Line2D([0],[0],marker='*',color='white',markerfacecolor='#111111',markeredgecolor='white',markersize=7.4,label='Ciudad de Guatemala')]
 
-def raw_wide_map(u,g,kind,title,legend_title,stem,*,department_borders=False,destination=None):
+def raw_wide_map(u,g,kind,title,legend_title,stem,*,department_borders=True,destination=None):
     fig,ax=plt.subplots(figsize=(7.15,3.75),facecolor='white'); legend=raw_draw(ax,u,g,kind,title,department_borders=department_borders)
     leg=ax.legend(handles=legend,title=legend_title,loc='lower center',bbox_to_anchor=(.5,-.02),fontsize=7.8,title_fontsize=7.8,frameon=False,ncol=3,columnspacing=.80,labelspacing=.34,handlelength=1.03); leg._legend_box.align='left'
     fig.subplots_adjust(left=.015,right=.985,top=.89,bottom=.028)
     if destination is None: save(fig,BODY/(stem+'_body.pdf'),PROJECT/'figures'/(stem+'.png'),True)
     else: save(fig,destination)
 
-def worker_wide_map(g,*,department_borders=False,destination=None):
+def worker_wide_map(g,*,department_borders=True,destination=None):
     bins=[-np.inf,25,50,100,200,400,np.inf]; labels=['<25','25--50','50--100','100--200','200--400','$\\geq$400']
     fig,ax=plt.subplots(figsize=(7.15,3.75),facecolor='white')
     draw(ax,g,'ag_workers_per_100_agricultural_ha',bins,labels,'b. Trabajadores agrícolas por 100 ha de tierra agrícola cartografiada\nCenso 2018 y MAGA 2025',head=10.8,department_borders=department_borders)
@@ -191,7 +198,7 @@ def worker_wide_map(g,*,department_borders=False,destination=None):
     if destination is None: save(fig,BODY/'fig07b_ine_agriculture_workers_usable_land_wide_body.pdf',PROJECT/'figures'/'fig07b_ine_agriculture_workers_usable_land_wide.png',True)
     else: save(fig,destination)
 
-def raw_tall_map(u,g,kind,title,legend_title,stem,*,department_borders=False,destination=None):
+def raw_tall_map(u,g,kind,title,legend_title,stem,*,department_borders=True,destination=None):
     fig,ax=plt.subplots(figsize=(6.1,6.35),facecolor='white'); legend=raw_draw(ax,u,g,kind,title,department_borders=department_borders)
     crop_legend = kind == 'agricultural_crops'
     leg=ax.legend(handles=legend,title=legend_title,loc='lower left',fontsize=8.35 if crop_legend else 9.2,title_fontsize=8.35 if crop_legend else 9.2,frameon=False,ncol=3 if crop_legend else 2,columnspacing=.62,labelspacing=.30,handlelength=1.00); leg._legend_box.align='left'
@@ -200,10 +207,10 @@ def raw_tall_map(u,g,kind,title,legend_title,stem,*,department_borders=False,des
     else: save(fig,destination)
 
 def municipal_metrics(m):
-    """Merge employment/land exposure with common-reference CHIRPS shocks for all 340 municipalities."""
+    # Municipal counterparts of H, d, p, E and C using the same published formula.
     current=pd.read_csv(DERIVED/'chirps_2026_municipality.csv')
     current['codigo_municipio_4d']=pd.to_numeric(current.municipality_id,errors='raise').astype(int).astype(str).str.zfill(4)
-    current_cols=['codigo_municipio_4d','historical_mean_may_aug_mm','historical_sd_may_aug_mm',
+    current_cols=['codigo_municipio_4d','historical_median_may_aug_mm','historical_sd_may_aug_mm',
                   'rain_2026_may_aug_mm','rainfall_z_score_vs_1981_2025']
     x=m.merge(current[current_cols],on='codigo_municipio_4d',validate='one_to_one')
     historic=pd.read_csv(APP/'chirps_common_reference_zscore_2015_2019_2025_municipality.csv')
@@ -212,14 +219,15 @@ def municipal_metrics(m):
     historic=historic.rename(columns={'rainfall_z_score_common':'z_2015_common'})[['codigo_municipio_4d','z_2015_common']]
     x=x.merge(historic,on='codigo_municipio_4d',validate='one_to_one')
     x['z_2026_common']=x.rainfall_z_score_vs_1981_2025
-    x['impact_composite']=np.maximum(-x.z_2026_common,0)*x.ag_workers_per_100_agricultural_ha
-    x['impact_composite_2015']=np.maximum(-x.z_2015_common,0)*x.ag_workers_per_100_agricultural_ha
-    x['impact_agricultural_dependence']=np.maximum(-x.z_2026_common,0)*(x.agricultural_share_pct/100)
-    x['impact_composite_percentile']=100*x.impact_composite.rank(method='average',pct=True)
-    x['impact_agricultural_dependence_percentile']=100*x.impact_agricultural_dependence.rank(method='average',pct=True)
-    x['impact_two_channel_composite']=0.5*(x.impact_composite_percentile+x.impact_agricultural_dependence_percentile)
+    x['H_2026']=np.maximum(-x.z_2026_common,0)
+    x['H_2015']=np.maximum(-x.z_2015_common,0)
+    x['d_i_dependency_pctile']=100*x.agricultural_share_pct.rank(method='average',pct=True)
+    x['p_i_land_worker_pctile']=100*x.ag_workers_per_100_agricultural_ha.rank(method='average',pct=True)
+    x['E_i_structural_exposure']=0.5*(x.d_i_dependency_pctile+x.p_i_land_worker_pctile)
+    x['C_i_impact_2026']=x.H_2026*x.E_i_structural_exposure
+    x['C_i_impact_2015']=x.H_2015*x.E_i_structural_exposure
     if len(x)!=340: raise ValueError('Expected 340 municipal rows in impact table')
-    return x.sort_values(['impact_two_channel_composite','Departamento','Municipio'],ascending=[False,True,True]).reset_index(drop=True)
+    return x.sort_values(['C_i_impact_2026','Departamento','Municipio'],ascending=[False,True,True]).reset_index(drop=True)
 
 
 def field_rows(m):
@@ -234,169 +242,131 @@ def tex_escape(x):
     return str(x).replace('&', r'\&').replace('%', r'\%').replace('_', r'\_')
 
 
+def historic_cell(median, sd):
+    return rf'\shortstack{{{median:.0f}\\({sd:.0f})}}'
+
+
+def z_cell(value):
+    return rf'\cellcolor{{currentz}}\textbf{{{value:.2f}}}'
+
+
+def c_cell(value):
+    return rf'\cellcolor{{impactstrong}}\underline{{\textbf{{{value:.1f}}}}}'
+
+
+def oxfam_cell(value):
+    return '---' if pd.isna(value) else rf'\cellcolor{{oxfamlite}}\underline{{\textbf{{{value:.2f}}}}}'
+
+
+def department_row(r, *, site=False):
+    label=(rf'\rowcolor{{sitegray}}\quad\textit{{{tex_escape(r.Municipio)} (municipio)}}'
+           if site else tex_escape(r.Departamento))
+    workers=r.A if site else r.agricultural_workers
+    total=r.total if site else r.total_workers
+    rain=r.rain_2026_may_aug_mm if site else r.rain_2026_mm
+    median=r.historical_median_may_aug_mm if site else r.hist_median_mm
+    sd=r.historical_sd_may_aug_mm if site else r.hist_sd_mm
+    oxfam='---' if site else oxfam_cell(r.oxfam_households_with_losses_pct)
+    return (f'{label} & {historic_cell(median,sd)} & {rain:.0f} & {z_cell(r.z_2026_common)} & {r.H_2026:.2f} & '
+            f'{workers:,.0f} & {total:,.0f} & {r.agricultural_share_pct:.1f}\\% & {r.d_i_dependency_pctile:.1f} & '
+            f'{r.agricultural_land_ha:,.0f} & {r.ag_workers_per_100_agricultural_ha:.1f} & {r.p_i_land_worker_pctile:.1f} & '
+            f'{r.E_i_structural_exposure:.1f} & {c_cell(r.C_i_impact_2026)} & {oxfam} ' + r'\\')
+
+
 def table(d,m):
-    """Main department table: index components, 2015 comparator, and field-site subrows."""
+    # Published department table: the former appendix specification, now the main table.
     sites=field_rows(m); by_department={key: chunk for key,chunk in sites.groupby('key')}
-    def current_z(value): return rf'\cellcolor{{currentz}}\textbf{{{value:.2f}}}'
-    def impact(value): return rf'\cellcolor{{impactlight}}\underline{{\textbf{{{value:.1f}}}}}'
-    def oxfam(value): return '---' if pd.isna(value) else rf'\cellcolor{{oxfamlite}}\underline{{\textbf{{{value:.2f}}}}}'
+    ordered=d.sort_values(['C_i_impact_2026','Departamento'],ascending=[False,True]).reset_index(drop=True)
     rows=[]
-    for r in d.itertuples(index=False):
-        rows.append(
-            f'{tex_escape(r.Departamento)} & {r.hist_mean_mm:.0f} ({r.hist_sd_mm:.0f}) & {r.rain_2026_mm:.0f} & '
-            f'{current_z(r.z_2026_common)} & {r.agricultural_workers:,.0f} & {r.agricultural_land_ha:,.0f} & '
-            f'{impact(r.impact_composite)} & {oxfam(r.oxfam_households_with_losses_pct)} & {r.z_2015_common:.2f} & {r.impact_composite_2015:.1f} ' + r'\\')
-        for q in by_department.get(r.key,sites.iloc[0:0]).itertuples(index=False):
-            rows.append(
-                f'\\rowcolor{{sitegray}}\\quad\\textit{{{tex_escape(q.Municipio)} (municipio)}} & '
-                f'{q.historical_mean_may_aug_mm:.0f} ({q.historical_sd_may_aug_mm:.0f}) & {q.rain_2026_may_aug_mm:.0f} & '
-                f'{current_z(q.z_2026_common)} & {q.A:,.0f} & {q.agricultural_land_ha:,.0f} & '
-                f'{impact(q.impact_composite)} & --- & {q.z_2015_common:.2f} & {q.impact_composite_2015:.1f} ' + r'\\')
-    content = r"""\begin{landscape}
+    for r in ordered.itertuples(index=False):
+        rows.append(department_row(r))
+        rows.extend(department_row(q,site=True) for q in by_department.get(r.key,sites.iloc[0:0]).itertuples(index=False))
+    content=r'''\begin{landscape}
 \thispagestyle{jpal}
 \definecolor{currentz}{HTML}{F9D9D2}
-\definecolor{impactlight}{HTML}{EAD1CD}
+\definecolor{impactstrong}{HTML}{D99C96}
 \definecolor{oxfamlite}{HTML}{FFF0BF}
 \definecolor{sitegray}{HTML}{F3F3F3}
 \begin{center}
 \refstepcounter{table}\label{tab:departmental-agricultural-drought-summary}
-{\small\textbf{Tabla \thetable. Sequía, exposición agrícola e índice de impacto, por departamento}\par}
-\vspace{4pt}
-\scriptsize
-\begin{tabular}{@{}lrrrrrrrrr@{}}
-\toprule
-& \multicolumn{3}{c}{\textbf{Sequía}} & \multicolumn{2}{c}{\textbf{Exposición agrícola}} & \multicolumn{1}{c}{\textbf{\underline{Índice}}} & \multicolumn{1}{c}{\textbf{\underline{Pérdidas}}} & \multicolumn{2}{c}{\textbf{Comparación 2015}} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-6}\cmidrule(lr){7-7}\cmidrule(lr){8-8}\cmidrule(lr){9-10}
-Departamento / municipio & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\2026} & \shortstack{$z_{2026}$\\actual} & \shortstack{Trab. agrícolas\\INE 2018} & \shortstack{ha agrícolas\\MAGA 2025} & \shortstack{\underline{Índice de impacto}\\$[-z_{2026}]_+\times$ trab.\\ag./100 ha} & \shortstack{\underline{Pérdidas reportadas}\\\underline{Oxfam 2026} (\%)} & $z_{2015}$ & \shortstack{Índice\\2015} \\
-\midrule
-"""+'\n'.join(rows)+r"""
-\bottomrule
-\end{tabular}
-\vspace{5pt}
-\begin{minipage}{0.97\linewidth}
-\scriptsize\RaggedRight\textit{Notas.} Fuentes: CHIRPS v3 (mayo--agosto), INE, Censo 2018, cuadro A12.2, MAGA, cobertura vegetal y uso de la tierra 2025, y Oxfam. Media histórica y DE corresponden a 1981--2025. Los dos z-scores usan esa misma referencia local; el de 2026 se sombrea para distinguir el shock actual. ``ha agrícolas'' es el área MAGA clasificada como Nivel 1 ``Territorios agrícolas''; es el denominador disponible para la medida y no equivale a tierra arable, sembrada o productiva. Índice de impacto = $\max(-z,0)\times(100A/\mathrm{ha}^{ag})$, una clasificación descriptiva, no una estimación de pérdidas ni causal. El índice y los porcentajes Oxfam disponibles se subrayan; las filas grises son municipios de campo dentro de su departamento. El índice 2015 aplica la misma exposición laboral y de cobertura MAGA al z-score de 2015, para permitir comparación mecánica de severidad/exposición.
-\end{minipage}
-\end{center}
-\end{landscape}
-"""
-    out=PROJECT/'overleaf/assets/tables/table_departmental_agricultural_drought_summary_body.tex'
-    out.parent.mkdir(parents=True,exist_ok=True); out.write_text(content,encoding='utf-8')
-
-
-
-def appendix_dependency_table(d,m):
-    """Appendix alternative to Table 1: land exposure plus agricultural dependence."""
-    sites=field_rows(m); by_department={key: chunk for key,chunk in sites.groupby('key')}
-    ordered=d.sort_values(['impact_two_channel_composite','Departamento'],ascending=[False,True]).reset_index(drop=True)
-    def current_z(value): return rf'\cellcolor{{currentz}}\textbf{{{value:.2f}}}'
-    def land_index(value): return rf'\cellcolor{{landindex}}\underline{{\textbf{{{value:.1f}}}}}'
-    def dependence_index(value): return rf'\cellcolor{{dependencelight}}\underline{{{value:.2f}}}'
-    def combined_index(value): return rf'\cellcolor{{combinedindex}}\underline{{\textbf{{{value:.1f}}}}}'
-    def oxfam(value): return '---' if pd.isna(value) else rf'\cellcolor{{oxfamlite}}\underline{{\textbf{{{value:.2f}}}}}'
-    rows=[]
-    for r in ordered.itertuples(index=False):
-        rows.append(
-            f'{tex_escape(r.Departamento)} & {r.hist_mean_mm:.0f} ({r.hist_sd_mm:.0f}) & {r.rain_2026_mm:.0f} & '
-            f'{current_z(r.z_2026_common)} & {r.agricultural_workers:,.0f} / {r.total_workers:,.0f} & {r.agricultural_share_pct:.1f}\\% & '
-            f'{r.agricultural_land_ha:,.0f} & {land_index(r.impact_composite)} & {dependence_index(r.impact_agricultural_dependence)} & '
-            f'{combined_index(r.impact_two_channel_composite)} & {oxfam(r.oxfam_households_with_losses_pct)} & {r.z_2015_common:.2f} & {r.impact_composite_2015:.1f} ' + r'\\')
-        for q in by_department.get(r.key,sites.iloc[0:0]).itertuples(index=False):
-            dependency=100*q.A/q.total
-            dependence_component=max(-q.z_2026_common,0)*(dependency/100)
-            rows.append(
-                f'\\rowcolor{{sitegray}}\\quad\\textit{{{tex_escape(q.Municipio)} (municipio)}} & '
-                f'{q.historical_mean_may_aug_mm:.0f} ({q.historical_sd_may_aug_mm:.0f}) & {q.rain_2026_may_aug_mm:.0f} & '
-                f'{current_z(q.z_2026_common)} & {q.A:,.0f} / {q.total:,.0f} & {dependency:.1f}\\% & '
-                f'{q.agricultural_land_ha:,.0f} & {land_index(q.impact_composite)} & {dependence_index(dependence_component)} & '
-                f'--- & --- & {q.z_2015_common:.2f} & {q.impact_composite_2015:.1f} ' + r'\\')
-    content=r"""\begin{landscape}
-\thispagestyle{jpal}
-\definecolor{currentz}{HTML}{F9D9D2}
-\definecolor{landindex}{HTML}{EAD1CD}
-\definecolor{dependencelight}{HTML}{FCE4E1}
-\definecolor{combinedindex}{HTML}{D99C96}
-\definecolor{oxfamlite}{HTML}{FFF0BF}
-\definecolor{sitegray}{HTML}{F3F3F3}
-\begin{center}
-\refstepcounter{table}\label{tab:departmental-agricultural-dependence-summary}
-{\small\textbf{Tabla \thetable. Dos canales de exposición agrícola e índice compuesto, por departamento}\par}
+{\small\textbf{Tabla \thetable. Sequía, exposición agrícola e índice compuesto, por departamento}\par}
 \vspace{3pt}
 \scriptsize
-\setlength{\tabcolsep}{2.2pt}
-\renewcommand{\arraystretch}{1.04}
-\resizebox{0.99\linewidth}{!}{%
-\begin{tabular}{@{}lrrrrrrrrrrrr@{}}
+\setlength{\tabcolsep}{1.55pt}
+\renewcommand{\arraystretch}{1.08}
+\resizebox{0.995\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrrrrr!{\vrule width .55pt}rrrrrr@{}}
 \toprule
-& \multicolumn{3}{c}{\textbf{Sequía}} & \multicolumn{3}{c}{\textbf{Exposición agrícola}} & \multicolumn{3}{c}{\textbf{Índices 2026}} & \multicolumn{1}{c}{\textbf{\underline{Pérdidas}}} & \multicolumn{2}{c}{\textbf{Comparación 2015}} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}\cmidrule(lr){11-11}\cmidrule(lr){12-13}
-Departamento / municipio & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\2026} & \shortstack{$z_{2026}$\\actual} & \shortstack{Trab. agr. /\\trab. total} & \shortstack{Dependencia\\agrícola (\\\%)} & \shortstack{ha agrícolas\\MAGA 2025} & \shortstack{Índice por tierra\\$[-z_{2026}]_+\times$ trab. ag./100 ha} & \shortstack{Índice de dependencia\\$[-z_{2026}]_+\times(A/Total)$} & \shortstack{Índice compuesto\\prom. de percentiles} & \shortstack{\underline{Pérdidas reportadas}\\\underline{Oxfam 2026} (\\\%)} & $z_{2015}$ & \shortstack{Índice por tierra\\2015} \\
+& \multicolumn{4}{c}{\textbf{Sequía}} & \multicolumn{4}{c}{\textbf{Ocupación y dependencia}} & \multicolumn{3}{c}{\textbf{Tierra agrícola cartografiada}} & \multicolumn{2}{c}{\textbf{Exposición e impacto}} & \multicolumn{1}{c}{\textbf{\underline{Pérdidas}}} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-12}\cmidrule(lr){13-14}\cmidrule(lr){15-15}
+Departamento / municipio & \shortstack{Mediana hist.\\(DE; CHIRPS)} & \shortstack{Lluvia 2026\\(CHIRPS)} & \shortstack{$z_{2026}$\\(CHIRPS)} & \shortstack{$H_i=[-z_i]_+$} & \shortstack{Trab. agr. $A$\\(INE 2018)} & \shortstack{Trab. total $T$\\(INE 2018)} & \shortstack{$A/T$\\(INE 2018)} & \shortstack{$d_i=\mathrm{Pctl}(A/T)$} & \shortstack{ha agrícolas\\(MAGA 2025)} & \shortstack{$A$/100 ha\\(INE/MAGA)} & \shortstack{$p_i=\mathrm{Pctl}(A/ha)$} & \shortstack{$E_i=(d_i+p_i)/2$} & \shortstack{\underline{$C_i=H_iE_i$}} & \shortstack{\underline{Oxfam 2026}\\\underline{hogares con pérdidas (\%)}} \\
 \midrule
-"""+'\n'.join(rows)+r"""
+'''+ '\n'.join(rows) + r'''
 \bottomrule
 \end{tabular}}
 \vspace{5pt}
-\begin{minipage}{0.985\linewidth}
-\scriptsize\RaggedRight\textit{Notas.} Fuentes: CHIRPS v3 (mayo--agosto), INE, Censo 2018, cuadro A12.2, MAGA, cobertura vegetal y uso de la tierra 2025, y Oxfam. Media histórica y DE: 1981--2025. ``Dependencia agrícola'' = $100A/Total$, donde $A$ es la población ocupada en agricultura, ganadería, silvicultura y pesca y $Total$ incluye la rama no especificada del cuadro oficial. El índice por tierra es $\max(-z_{2026},0)\times(100A/\mathrm{ha}^{ag})$; el índice de dependencia es $\max(-z_{2026},0)\times(A/Total)$. Como sus unidades difieren, el compuesto (0--100) es el promedio simple de los percentiles departamentales de ambos índices: mayor valor implica simultáneamente alta severidad/señal por tierra y alta severidad/dependencia laboral; no estima pérdidas ni causalidad. Se ordenan departamentos por ese compuesto. El sombreado rojo tenue distingue el índice de dependencia; el más oscuro marca el compuesto. ``ha agrícolas'' son polígonos MAGA de Nivel 1 ``Territorios agrícolas'', no tierra arable, sembrada o productiva. Las filas grises son municipios de campo; muestran sus componentes, pero no un compuesto porque el ranking se define sólo entre departamentos.
+\begin{minipage}{0.99\linewidth}
+\scriptsize\RaggedRight\textit{Notas.} Fuentes: CHIRPS v3 (mayo--agosto), INE (Censo 2018, cuadro A12.2), MAGA (cobertura vegetal y uso de la tierra 2025) y Oxfam. La primera celda reporta mediana histórica y, debajo entre paréntesis, desviación estándar (DE), ambas para 1981--2025. $H_i=\max(-z_i,0)$ expresa únicamente la severidad hídrica. $d_i=\mathrm{Pctl}(A_i/T_i)$ y $p_i=\mathrm{Pctl}(A_i/ha^{ag}_i)$ son percentiles empíricos de 0--100 entre los 22 departamentos; $E_i=(d_i+p_i)/2$ es su exposición agrícola estructural y $C_i=H_iE_i$ el índice compuesto, que ordena las filas. ``ha agrícolas'' suma sólo los polígonos MAGA de Nivel 1 ``Territorios agrícolas''; es una cobertura cartografiada, no tierra arable, sembrada, productiva ni una estimación de pérdidas. El sombreado rojo marca el índice compuesto; ámbar, los porcentajes Oxfam disponibles. Las filas grises son municipios de campo: sus $d$, $p$, $E$ y $C$ usan percentiles municipales (no departamentales), por lo que son descriptivos dentro de ese nivel.
 \end{minipage}
 \end{center}
 \end{landscape}
-"""
-    out=PROJECT/'overleaf/assets/tables/table_departmental_agricultural_dependence_appendix.tex'
-    out.parent.mkdir(parents=True,exist_ok=True); out.write_text(content,encoding='utf-8')
+'''
+    out=PROJECT/'overleaf/assets/tables/table_departmental_agricultural_drought_summary_body.tex'
+    out.parent.mkdir(parents=True,exist_ok=True)
+    out.write_text(content,encoding='utf-8')
+
 
 def municipal_table(m):
-    """Standalone municipality table: two exposure channels, ordered by their composite."""
+    # Standalone municipality table, identical in fields to Table 1 except Oxfam.
     x=municipal_metrics(m)
-    def current_z(value): return rf'\cellcolor{{currentz}}\textbf{{{value:.2f}}}'
-    def land_index(value): return rf'\cellcolor{{landindex}}\underline{{\textbf{{{value:.1f}}}}}'
-    def dependence_index(value): return rf'\cellcolor{{dependencelight}}\underline{{{value:.2f}}}'
-    def combined_index(value): return rf'\cellcolor{{combinedindex}}\underline{{\textbf{{{value:.1f}}}}}'
     rows=[]
     for r in x.itertuples(index=False):
         rows.append(
-            f'{tex_escape(r.Municipio)} ({tex_escape(r.Departamento)}) & {r.historical_mean_may_aug_mm:.0f} ({r.historical_sd_may_aug_mm:.0f}) & '
-            f'{r.rain_2026_may_aug_mm:.0f} & {current_z(r.z_2026_common)} & {r.A:,.0f} / {r.total:,.0f} & '
-            f'{r.agricultural_share_pct:.1f}\\% & {r.agricultural_land_ha:,.0f} & {land_index(r.impact_composite)} & '
-            f'{dependence_index(r.impact_agricultural_dependence)} & {combined_index(r.impact_two_channel_composite)} ' + r'\\')
-    content=r"""\newgeometry{top=0.50in,bottom=0.50in,left=0.60in,right=0.60in,headsep=0.08in,footskip=0.42in}
+            f'{tex_escape(r.Municipio)} ({tex_escape(r.Departamento)}) & {historic_cell(r.historical_median_may_aug_mm,r.historical_sd_may_aug_mm)} & '
+            f'{r.rain_2026_may_aug_mm:.0f} & {z_cell(r.z_2026_common)} & {r.H_2026:.2f} & '
+            f'{r.A:,.0f} & {r.total:,.0f} & {r.agricultural_share_pct:.1f}\\% & {r.d_i_dependency_pctile:.1f} & '
+            f'{r.agricultural_land_ha:,.0f} & {r.ag_workers_per_100_agricultural_ha:.1f} & {r.p_i_land_worker_pctile:.1f} & '
+            f'{r.E_i_structural_exposure:.1f} & {c_cell(r.C_i_impact_2026)} ' + r'\\')
+    content=r'''\newgeometry{top=0.46in,bottom=0.48in,left=0.48in,right=0.48in,headsep=0.08in,footskip=0.40in}
 \begin{landscape}
 \definecolor{currentz}{HTML}{F9D9D2}
-\definecolor{landindex}{HTML}{EAD1CD}
-\definecolor{dependencelight}{HTML}{FCE4E1}
-\definecolor{combinedindex}{HTML}{D99C96}
+\definecolor{impactstrong}{HTML}{D99C96}
 \scriptsize
-\setlength{\tabcolsep}{1.4pt}
+\setlength{\tabcolsep}{1.15pt}
+\renewcommand{\arraystretch}{1.03}
 \setlength{\LTleft}{0pt plus 1fill}
 \setlength{\LTright}{0pt plus 1fill}
-\begin{longtable}{@{}p{1.52in}rrrrrrrrr@{}}
-\caption{Sequía, exposición agrícola e índice compuesto por municipio, ordenado por compuesto 2026}\label{tab:municipal-agricultural-drought-summary}\\
+\begin{longtable}{@{}p{1.42in}rrrrrrrr!{\vrule width .55pt}rrrrr@{}}
+\caption{Sequía, exposición agrícola e índice compuesto por municipio, ordenado por $C_i$ en 2026}\label{tab:municipal-agricultural-drought-summary}\\
 \toprule
-& \multicolumn{3}{c}{\textbf{Sequía}} & \multicolumn{3}{c}{\textbf{Exposición agrícola}} & \multicolumn{3}{c}{\textbf{Índices 2026}} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
-Municipio (dpto.) & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\2026} & \shortstack{$z_{2026}$\\actual} & \shortstack{Trab. agr. /\\Total} & \shortstack{Dependencia\\agrícola} & \shortstack{ha agrícolas\\MAGA 2025} & \shortstack{Índice\\tierra} & \shortstack{Índice\\dependencia} & \shortstack{Compuesto\\(percentil)} \\
+& \multicolumn{4}{c}{\textbf{Sequía}} & \multicolumn{4}{c}{\textbf{Ocupación y dependencia}} & \multicolumn{3}{c}{\textbf{Tierra agrícola cartografiada}} & \multicolumn{2}{c}{\textbf{Exposición e impacto}} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-12}\cmidrule(lr){13-14}
+Municipio (dpto.) & \shortstack{Mediana hist.\\(DE; CHIRPS)} & \shortstack{Lluvia 2026\\(CHIRPS)} & \shortstack{$z_{2026}$\\(CHIRPS)} & \shortstack{$H_i$} & \shortstack{Trab. agr. $A$\\(INE 2018)} & \shortstack{Trab. total $T$\\(INE 2018)} & \shortstack{$A/T$\\(INE 2018)} & \shortstack{$d_i$} & \shortstack{ha agrícolas\\(MAGA 2025)} & \shortstack{$A$/100 ha\\(INE/MAGA)} & \shortstack{$p_i$} & \shortstack{$E_i$} & \shortstack{\underline{$C_i=H_iE_i$}} \\
 \midrule
 \endfirsthead
-\multicolumn{10}{c}{\small\textit{Cuadro 1. Continúa}}\\
+\multicolumn{14}{c}{\small\textit{Cuadro 1. Continúa}}\\
 \toprule
-& \multicolumn{3}{c}{\textbf{Sequía}} & \multicolumn{3}{c}{\textbf{Exposición agrícola}} & \multicolumn{3}{c}{\textbf{Índices 2026}} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
-Municipio (dpto.) & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\2026} & \shortstack{$z_{2026}$\\actual} & \shortstack{Trab. agr. /\\Total} & \shortstack{Dependencia\\agrícola} & \shortstack{ha agrícolas\\MAGA 2025} & \shortstack{Índice\\tierra} & \shortstack{Índice\\dependencia} & \shortstack{Compuesto\\(percentil)} \\
+& \multicolumn{4}{c}{\textbf{Sequía}} & \multicolumn{4}{c}{\textbf{Ocupación y dependencia}} & \multicolumn{3}{c}{\textbf{Tierra agrícola cartografiada}} & \multicolumn{2}{c}{\textbf{Exposición e impacto}} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-12}\cmidrule(lr){13-14}
+Municipio (dpto.) & \shortstack{Mediana hist.\\(DE; CHIRPS)} & \shortstack{Lluvia 2026\\(CHIRPS)} & \shortstack{$z_{2026}$\\(CHIRPS)} & \shortstack{$H_i$} & \shortstack{Trab. agr. $A$\\(INE 2018)} & \shortstack{Trab. total $T$\\(INE 2018)} & \shortstack{$A/T$\\(INE 2018)} & \shortstack{$d_i$} & \shortstack{ha agrícolas\\(MAGA 2025)} & \shortstack{$A$/100 ha\\(INE/MAGA)} & \shortstack{$p_i$} & \shortstack{$E_i$} & \shortstack{\underline{$C_i=H_iE_i$}} \\
 \midrule
 \endhead
 \midrule
-\multicolumn{10}{r}{\textit{Continúa en la página siguiente}}\\
+\multicolumn{14}{r}{\textit{Continúa en la página siguiente}}\\
 \endfoot
 \bottomrule
-\multicolumn{10}{@{}p{0.96\linewidth}@{}}{\scriptsize\RaggedRight\textit{Notas.} Fuentes: CHIRPS v3, INE, Censo 2018, cuadro A12.2, y MAGA, cobertura vegetal y uso de la tierra 2025. Media histórica y DE: 1981--2025. ``Dependencia agrícola'' = $100A/Total$, donde $A$ es la población ocupada en agricultura, ganadería, silvicultura y pesca y $Total$ incluye la rama no especificada del cuadro oficial. Índice por tierra = $\max(-z_{2026},0)\times(100A/\mathrm{ha}^{ag})$; índice de dependencia = $\max(-z_{2026},0)\times(A/Total)$. Como las unidades difieren, el compuesto (0--100) es el promedio simple de los percentiles municipales de ambos índices. La tabla se ordena por ese compuesto; no es una estimación de pérdidas ni causalidad. ``ha agrícolas'' = polígonos MAGA Nivel 1 ``Territorios agrícolas'', no tierra arable, sembrada o productiva.}\\
+\multicolumn{14}{@{}p{0.94\linewidth}@{}}{\scriptsize\RaggedRight\textit{Notas.} Fuentes: CHIRPS v3 (mayo--agosto), INE (Censo 2018, cuadro A12.2) y MAGA (cobertura vegetal y uso de la tierra 2025). Mediana histórica y DE: 1981--2025. $H_i=\max(-z_i,0)$; $d_i=\mathrm{Pctl}(A_i/T_i)$; $p_i=\mathrm{Pctl}(A_i/ha^{ag}_i)$; $E_i=(d_i+p_i)/2$; y $C_i=H_iE_i$. Los percentiles son empíricos de 0--100 entre los 340 municipios y la tabla se ordena por $C_i$. ``ha agrícolas'' suma sólo los polígonos MAGA de Nivel 1 ``Territorios agrícolas''; no equivale a tierra arable, sembrada, productiva ni a pérdidas. El índice es descriptivo y no estima impactos causales.}\\
 \endlastfoot
-"""+'\n'.join(rows)+r"""
+'''+ '\n'.join(rows) + r'''
 \end{longtable}
 \end{landscape}
 \restoregeometry
-"""
+'''
     out=PROJECT/'overleaf/assets/tables/table_municipal_agricultural_drought_summary_supplemental.tex'
-    out.parent.mkdir(parents=True,exist_ok=True); out.write_text(content,encoding='utf-8')
+    out.parent.mkdir(parents=True,exist_ok=True)
+    out.write_text(content,encoding='utf-8')
     x.to_csv(DERIVED/'municipal_agricultural_drought_impact_2026_2015.csv',index=False)
+
 
 def exploration(g):
     specs=[
@@ -417,7 +387,7 @@ def main():
     raw_tall_map(u,g,'agricultural_crops','Polígonos MAGA: cultivos y usos agrícolas\nMAGA 2025','Cultivo/uso agrícola','appendix_app03_maga_agricultural_crops_polygons')
     raw_tall_map(u,g,'maize_bean','Polígonos cartografiados de maíz y frijol\nMAGA 2025','Uso/cobertura MAGA','fig08_maga_maize_bean_area')
     # The report uses the horizontal land-use/worker pair above; other variants stay in OUTPUT.
-    exploration(z); table(d,m); appendix_dependency_table(d,m); municipal_table(m)
+    exploration(z); table(d,m); municipal_table(m)
     raw_wide_map(u,g,'land_cover','Cobertura y uso de la tierra: denominador agrícola\nMAGA 2025','Clase MAGA Nivel 1','unused',department_borders=True,destination=DEPARTMENT_EXPORTS/'figura_07a_cobertura_maga_fronteras_departamentales.pdf')
     worker_wide_map(z,department_borders=True,destination=DEPARTMENT_EXPORTS/'figura_07b_trabajadores_por_tierra_fronteras_departamentales.pdf')
     raw_tall_map(u,g,'agricultural_crops','Polígonos MAGA: cultivos y usos agrícolas\nMAGA 2025','Cultivo/uso agrícola','unused',department_borders=True,destination=DEPARTMENT_EXPORTS/'apendice_cultivos_maga_fronteras_departamentales.pdf')

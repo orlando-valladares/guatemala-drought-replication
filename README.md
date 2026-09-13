@@ -15,13 +15,17 @@ The legacy scripts still encode the original personal-workspace paths. Porting t
 
 ## Scope
 
-Core analytical outputs use CHIRPS v3 precipitation, Guatemala municipal boundaries, INE Censo 2018 employment data, and MAGA 2025 land-cover polygons. The impact index is descriptive:
+Core analytical outputs use CHIRPS v3 precipitation, Guatemala municipal boundaries, INE Censo 2018 employment data, and MAGA 2025 land-cover polygons. The impact index is descriptive. At each reported geographical level, it is defined as:
 
 ```text
-max(-z, 0) × (100 × agricultural workers / mapped agricultural hectares)
+H_i = max(-z_i, 0)
+d_i = Pctl(A_i / T_i)
+p_i = Pctl(A_i / ha_ag,i)
+E_i = (d_i + p_i) / 2
+C_i = H_i × E_i
 ```
 
-It ranks joint drought severity and agricultural-employment exposure; it is neither an estimate of crop loss nor a causal effect.
+`A` is agricultural employment in the INE 2018 table, `T` is total occupied population, and `ha_ag` is MAGA 2025 mapped agricultural land. `Pctl` is the empirical 0--100 percentile within the displayed municipal or department distribution. `H` measures drought severity, `E` structural agricultural exposure, and `C` their descriptive combination; none estimates crop losses or a causal effect.
 
 ## Setup
 

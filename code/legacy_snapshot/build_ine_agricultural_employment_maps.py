@@ -116,7 +116,7 @@ def capital_handle() -> Line2D:
 
 
 def draw_map(ax, geo: gpd.GeoDataFrame, value: str, bins: list[float], labels: list[str], panel_title: str,
-             header_size: float = 8.2, department_borders: bool = False) -> list:
+             header_size: float = 8.2, department_borders: bool = True) -> list:
     """Draw a discrete municipality map matching the report's CHIRPS styling."""
     classified = classify(geo[value], bins, labels)
     plotted = geo.assign(_class=classified)
@@ -169,7 +169,7 @@ def primary_pair(geo: gpd.GeoDataFrame, national_density: float) -> Path:
 
 
 def primary_single(geo: gpd.GeoDataFrame, value: str, bins: list[float], labels: list[str], panel_title: str,
-                   legend_title: str, stem: str, *, department_borders: bool = False, destination: Path | None = None) -> Path:
+                   legend_title: str, stem: str, *, department_borders: bool = True, destination: Path | None = None) -> Path:
     """Create one legible half-page agricultural map for the report or a country export."""
     fig, ax = plt.subplots(figsize=(6.1, 6.35), facecolor="white")
     handles = draw_map(ax, geo, value, bins, labels, panel_title, header_size=12.0, department_borders=department_borders)
@@ -198,6 +198,7 @@ def primary_singles(geo: gpd.GeoDataFrame, national_density: float) -> list[Path
             geo, "agricultural_density_per_km2", DENSITY_BINS, DENSITY_LABELS,
             f"Densidad de trabajadores agrícolas\nCenso 2018 | Nacional: {national_density:.1f} trabajadores/km²",
             "Trabajadores agrícolas por km²", "fig06b_ine_agriculture_density",
+            destination=ALTERNATIVES / "mapa_densidad_trabajadores_agricolas_km2.pdf",
         ),
         primary_single(
             geo, "A", COUNT_BINS, COUNT_LABELS,

@@ -117,7 +117,7 @@ def capital_handle() -> Line2D:
 
 
 def draw(ax, geo: gpd.GeoDataFrame, info: pd.DataFrame, capital: gpd.GeoDataFrame, header: str, kind: str,
-         header_size: float = 8.7, year_size: float | None = None, department_borders: bool = False) -> None:
+         header_size: float = 8.7, year_size: float | None = None, department_borders: bool = True) -> None:
     """Draw a municipal map, optionally overlaying department outlines for exports."""
     column, groups, colours = ("pgroup", PGROUPS, PCOLOURS) if kind == "p" else ("zgroup", ZGROUPS, ZCOLOURS)
     values = geo.merge(info, on="municipality_id", validate="one_to_one")
@@ -183,7 +183,7 @@ def percentile_trio(geo, capital, values, national, years, method, stem) -> None
 
 
 def _family_grid_main(geo, capital, values, national, kind: str, stem: str,
-                      department_borders: bool = False, alternate: Path | None = None) -> None:
+                      department_borders: bool = True, alternate: Path | None = None) -> None:
     """Portrait main-body family with dedicated row headings and readable headers."""
     families = [
         ([2025, 2026], "available", "Años recientes — referencia disponible antes de cada año"),
@@ -235,7 +235,7 @@ def family_grid_main_percentile(geo, capital, values, national) -> None:
     _family_grid_main(geo, capital, values, national, "p", "fig01_percentile_map_family_3x2")
 
 
-def percentile_family_grid_legacy(geo, capital, values, national, *, department_borders: bool = False,
+def percentile_family_grid_legacy(geo, capital, values, national, *, department_borders: bool = True,
                                   alternate: Path | None = None) -> None:
     """Appendix 3x3 percentile family retaining the 2019 comparison column."""
     families = [
@@ -266,7 +266,7 @@ def compact_percentile_header(header: str) -> str:
     return f"{year}\n{statistics}"
 
 
-def appendix_zscore_family(geo, capital, values, national, *, department_borders: bool = False,
+def appendix_zscore_family(geo, capital, values, national, *, department_borders: bool = True,
                           alternate: Path | None = None) -> None:
     """Appendix 3x3 z-score analogue, preserving 2019 and the two frames."""
     families = [
@@ -299,15 +299,10 @@ def main() -> None:
     values[2026] = current.reindex(values.index)["rain_2026_may_aug_mm"]
     national = pd.read_csv(TABLES / "chirps_shock_comparison_national_annual.csv").set_index("year")["national_rain_may_aug_mm"].loc[list(range(1981, 2027))]
 
-    info, header = panel(values, national, 2026, "available")
-    single(geo, capital, info, header, "p", "fig01a_chirps_percentile_2026")
-    info, header = panel(values, national, 2026, "fixed_1981_2025")
-    single(geo, capital, info, header, "z", "fig01z_chirps_zscore_2026")
-    percentile_trio(geo, capital, values, national, [2024, 2025, 2026], "available", "fig01c_chirps_recent_years_2024_2025_2026")
-    percentile_trio(geo, capital, values, national, [2015, 2019, 2026], "available", "fig01f_chirps_driest_years_contemporaneous")
-    percentile_trio(geo, capital, values, national, [2015, 2019, 2026], "leave_one_out", "fig01b_chirps_driest_years_2015_2019_2026")
+    # Only figures referenced by main.tex are copied into the author-facing
+    # Overleaf project. Earlier standalone variants remain reproducible through
+    # their functions but are deliberately not regenerated as report assets.
     family_grid_main_zscore(geo, capital, values, national)
-    family_grid_main_percentile(geo, capital, values, national)
     percentile_family_grid_legacy(geo, capital, values, national)
     appendix_zscore_family(geo, capital, values, national)
     DEPARTMENT_EXPORTS.mkdir(parents=True, exist_ok=True)
