@@ -92,6 +92,13 @@ def department(m):
     d['drought_severity_negative_z_2015']=np.maximum(-d.z_2015_common,0)
     d['impact_composite']=d.ag_workers_per_100_agricultural_ha*d.drought_severity_negative_z
     d['impact_composite_2015']=d.ag_workers_per_100_agricultural_ha*d.drought_severity_negative_z_2015
+    # Dependence is a worker share (0--1), unlike the land index, which uses
+    # workers per 100 mapped agricultural hectares. Percentile ranks make a
+    # unit-free, equally weighted combined ranking possible.
+    d['impact_agricultural_dependence']=d.drought_severity_negative_z*(d.agricultural_share_pct/100)
+    d['impact_composite_percentile']=100*d.impact_composite.rank(method='average',pct=True)
+    d['impact_agricultural_dependence_percentile']=100*d.impact_agricultural_dependence.rank(method='average',pct=True)
+    d['impact_two_channel_composite']=0.5*(d.impact_composite_percentile+d.impact_agricultural_dependence_percentile)
     d['oxfam_households_with_losses_pct']=d.key.map(OXFAM)
     return d.sort_values(['impact_composite','Departamento'],ascending=[False,True]).reset_index(drop=True)
 
@@ -102,6 +109,32 @@ LAND_LEVEL1 = [
     ('4. Zonas húmedas', '#66c2a5', 'Zonas húmedas'),
     ('5. Cuerpos de agua', '#2b8cbe', 'Cuerpos de agua'),
 ]
+
+# Broad display groups retain the source crop labels relevant to the report,
+# but keep a raw-polygon legend legible. They never alter the aggregation.
+CROP_GROUPS = [
+    ('Maíz y frijol', '#d95f0e'),
+    ('Caña de azúcar', '#fdb863'),
+    ('Café y asociaciones', '#8c510a'),
+    ('Cardamomo y asociaciones', '#5aae61'),
+    ('Palma de aceite', '#1b7837'),
+    ('Hortalizas, huertos y flores', '#8073ac'),
+    ('Pastos', '#b8e186'),
+    ('Hule', '#4d4d4d'),
+    ('Otros cultivos', '#e08214'),
+]
+
+def crop_group(usot):
+    value = str(usot)
+    if value in {'Maíz y frijol', 'Frijol'}: return 'Maíz y frijol'
+    if value == 'Caña de azúcar': return 'Caña de azúcar'
+    if value.startswith('Café'): return 'Café y asociaciones'
+    if 'Cardamomo' in value: return 'Cardamomo y asociaciones'
+    if value == 'Palma de aceite': return 'Palma de aceite'
+    if value in {'Otras hortalizas (cebolla, repollo, zanahoria, lechuga y otros)', 'Huerto', 'Tomate', 'Papa', 'Flores y follajes', 'Loroco', 'Fresa', 'Mora', 'Pashte', 'Sábila', 'Mashán', 'Vivero', 'Cúrcuma'}: return 'Hortalizas, huertos y flores'
+    if value in {'Pasto natural', 'Pasto cultivado'}: return 'Pastos'
+    if value == 'Hule': return 'Hule'
+    return 'Otros cultivos'
 
 def raw_polygons(target_crs):
     """Read MAGA polygons only for display; aggregation continues to use CODIGO."""
@@ -118,11 +151,15 @@ def raw_draw(ax,u,g,kind,title,*,department_borders=False):
         for value,color,label in LAND_LEVEL1:
             u.loc[u.Nivel_1.eq(value)].plot(ax=ax,color=color,edgecolor='none',linewidth=0,rasterized=True,zorder=1)
         legend=[Patch(facecolor=color,edgecolor='#555555',linewidth=.35,label=label) for _,color,label in LAND_LEVEL1]
-    elif kind=='agricultural_land':
-        # Raw MAGA agricultural polygons are coloured; the grey background is only a country outline.
+    elif kind=='agricultural_crops':
+        # Raw MAGA polygons, grouped only to make a clear crop/use legend.
         g.plot(ax=ax,color='#e6e6e6',edgecolor='none',linewidth=0,zorder=1)
-        u.loc[u.Nivel_1.eq('2. Territorios agrícolas')].plot(ax=ax,color='#f1b82d',edgecolor='none',linewidth=0,rasterized=True,zorder=2)
-        legend=[Patch(facecolor='#f1b82d',edgecolor='#555555',linewidth=.35,label='Territorios agrícolas (Nivel 1)'),Patch(facecolor='#e6e6e6',edgecolor='#555555',linewidth=.35,label='Otras áreas del país')]
+        agricultural=u.loc[u.Nivel_1.eq('2. Territorios agrícolas')].copy()
+        agricultural['_crop_group']=agricultural.USOT.map(crop_group)
+        for label,color in CROP_GROUPS:
+            agricultural.loc[agricultural._crop_group.eq(label)].plot(ax=ax,color=color,edgecolor='none',linewidth=0,rasterized=True,zorder=2)
+        legend=[Patch(facecolor=color,edgecolor='#555555',linewidth=.35,label=label) for label,color in CROP_GROUPS]
+        legend.append(Patch(facecolor='#e6e6e6',edgecolor='#555555',linewidth=.35,label='Áreas no agrícolas'))
     elif kind=='maize_bean':
         # The background is the national outline; only the source crop polygons are drawn in colour.
         # This keeps a raw-polygon view without creating a 100,000-polygon grey layer.
@@ -156,7 +193,8 @@ def worker_wide_map(g,*,department_borders=False,destination=None):
 
 def raw_tall_map(u,g,kind,title,legend_title,stem,*,department_borders=False,destination=None):
     fig,ax=plt.subplots(figsize=(6.1,6.35),facecolor='white'); legend=raw_draw(ax,u,g,kind,title,department_borders=department_borders)
-    leg=ax.legend(handles=legend,title=legend_title,loc='lower left',fontsize=9.2,title_fontsize=9.2,frameon=False,ncol=2,columnspacing=.72,labelspacing=.35,handlelength=1.05); leg._legend_box.align='left'
+    crop_legend = kind == 'agricultural_crops'
+    leg=ax.legend(handles=legend,title=legend_title,loc='lower left',fontsize=8.35 if crop_legend else 9.2,title_fontsize=8.35 if crop_legend else 9.2,frameon=False,ncol=3 if crop_legend else 2,columnspacing=.62,labelspacing=.30,handlelength=1.00); leg._legend_box.align='left'
     fig.subplots_adjust(left=.025,right=.975,top=.91,bottom=.025)
     if destination is None: save(fig,BODY/(stem+'_body.pdf'),PROJECT/'figures'/(stem+'.png'),True)
     else: save(fig,destination)
@@ -241,6 +279,67 @@ Departamento / municipio & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\
     out.parent.mkdir(parents=True,exist_ok=True); out.write_text(content,encoding='utf-8')
 
 
+
+def appendix_dependency_table(d,m):
+    """Appendix alternative to Table 1: land exposure plus agricultural dependence."""
+    sites=field_rows(m); by_department={key: chunk for key,chunk in sites.groupby('key')}
+    ordered=d.sort_values(['impact_two_channel_composite','Departamento'],ascending=[False,True]).reset_index(drop=True)
+    def current_z(value): return rf'\cellcolor{{currentz}}\textbf{{{value:.2f}}}'
+    def land_index(value): return rf'\cellcolor{{landindex}}\underline{{\textbf{{{value:.1f}}}}}'
+    def dependence_index(value): return rf'\cellcolor{{dependencelight}}\underline{{{value:.2f}}}'
+    def combined_index(value): return rf'\cellcolor{{combinedindex}}\underline{{\textbf{{{value:.1f}}}}}'
+    def oxfam(value): return '---' if pd.isna(value) else rf'\cellcolor{{oxfamlite}}\underline{{\textbf{{{value:.2f}}}}}'
+    rows=[]
+    for r in ordered.itertuples(index=False):
+        rows.append(
+            f'{tex_escape(r.Departamento)} & {r.hist_mean_mm:.0f} ({r.hist_sd_mm:.0f}) & {r.rain_2026_mm:.0f} & '
+            f'{current_z(r.z_2026_common)} & {r.agricultural_workers:,.0f} / {r.total_workers:,.0f} & {r.agricultural_share_pct:.1f}\\% & '
+            f'{r.agricultural_land_ha:,.0f} & {land_index(r.impact_composite)} & {dependence_index(r.impact_agricultural_dependence)} & '
+            f'{combined_index(r.impact_two_channel_composite)} & {oxfam(r.oxfam_households_with_losses_pct)} & {r.z_2015_common:.2f} & {r.impact_composite_2015:.1f} ' + r'\\')
+        for q in by_department.get(r.key,sites.iloc[0:0]).itertuples(index=False):
+            dependency=100*q.A/q.total
+            dependence_component=max(-q.z_2026_common,0)*(dependency/100)
+            rows.append(
+                f'\\rowcolor{{sitegray}}\\quad\\textit{{{tex_escape(q.Municipio)} (municipio)}} & '
+                f'{q.historical_mean_may_aug_mm:.0f} ({q.historical_sd_may_aug_mm:.0f}) & {q.rain_2026_may_aug_mm:.0f} & '
+                f'{current_z(q.z_2026_common)} & {q.A:,.0f} / {q.total:,.0f} & {dependency:.1f}\\% & '
+                f'{q.agricultural_land_ha:,.0f} & {land_index(q.impact_composite)} & {dependence_index(dependence_component)} & '
+                f'--- & --- & {q.z_2015_common:.2f} & {q.impact_composite_2015:.1f} ' + r'\\')
+    content=r"""\begin{landscape}
+\thispagestyle{jpal}
+\definecolor{currentz}{HTML}{F9D9D2}
+\definecolor{landindex}{HTML}{EAD1CD}
+\definecolor{dependencelight}{HTML}{FCE4E1}
+\definecolor{combinedindex}{HTML}{D99C96}
+\definecolor{oxfamlite}{HTML}{FFF0BF}
+\definecolor{sitegray}{HTML}{F3F3F3}
+\begin{center}
+\refstepcounter{table}\label{tab:departmental-agricultural-dependence-summary}
+{\small\textbf{Tabla \thetable. Dos canales de exposición agrícola e índice compuesto, por departamento}\par}
+\vspace{3pt}
+\scriptsize
+\setlength{\tabcolsep}{2.2pt}
+\renewcommand{\arraystretch}{1.04}
+\resizebox{0.99\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrrrrrrrrr@{}}
+\toprule
+& \multicolumn{3}{c}{\textbf{Sequía}} & \multicolumn{3}{c}{\textbf{Exposición agrícola}} & \multicolumn{3}{c}{\textbf{Índices 2026}} & \multicolumn{1}{c}{\textbf{\underline{Pérdidas}}} & \multicolumn{2}{c}{\textbf{Comparación 2015}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}\cmidrule(lr){11-11}\cmidrule(lr){12-13}
+Departamento / municipio & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\2026} & \shortstack{$z_{2026}$\\actual} & \shortstack{Trab. agr. /\\trab. total} & \shortstack{Dependencia\\agrícola (\\\%)} & \shortstack{ha agrícolas\\MAGA 2025} & \shortstack{Índice por tierra\\$[-z_{2026}]_+\times$ trab. ag./100 ha} & \shortstack{Índice de dependencia\\$[-z_{2026}]_+\times(A/Total)$} & \shortstack{Índice compuesto\\prom. de percentiles} & \shortstack{\underline{Pérdidas reportadas}\\\underline{Oxfam 2026} (\\\%)} & $z_{2015}$ & \shortstack{Índice por tierra\\2015} \\
+\midrule
+"""+'\n'.join(rows)+r"""
+\bottomrule
+\end{tabular}}
+\vspace{5pt}
+\begin{minipage}{0.985\linewidth}
+\scriptsize\RaggedRight\textit{Notas.} Fuentes: CHIRPS v3 (mayo--agosto), INE, Censo 2018, cuadro A12.2, MAGA, cobertura vegetal y uso de la tierra 2025, y Oxfam. Media histórica y DE: 1981--2025. ``Dependencia agrícola'' = $100A/Total$, donde $A$ es la población ocupada en agricultura, ganadería, silvicultura y pesca y $Total$ incluye la rama no especificada del cuadro oficial. El índice por tierra es $\max(-z_{2026},0)\times(100A/\mathrm{ha}^{ag})$; el índice de dependencia es $\max(-z_{2026},0)\times(A/Total)$. Como sus unidades difieren, el compuesto (0--100) es el promedio simple de los percentiles departamentales de ambos índices: mayor valor implica simultáneamente alta severidad/señal por tierra y alta severidad/dependencia laboral; no estima pérdidas ni causalidad. Se ordenan departamentos por ese compuesto. El sombreado rojo tenue distingue el índice de dependencia; el más oscuro marca el compuesto. ``ha agrícolas'' son polígonos MAGA de Nivel 1 ``Territorios agrícolas'', no tierra arable, sembrada o productiva. Las filas grises son municipios de campo; muestran sus componentes, pero no un compuesto porque el ranking se define sólo entre departamentos.
+\end{minipage}
+\end{center}
+\end{landscape}
+"""
+    out=PROJECT/'overleaf/assets/tables/table_departmental_agricultural_dependence_appendix.tex'
+    out.parent.mkdir(parents=True,exist_ok=True); out.write_text(content,encoding='utf-8')
+
 def municipal_table(m):
     """Standalone longtable for supplemental.tex; ordered by the 2026 impact index."""
     x=municipal_metrics(m)
@@ -302,13 +401,13 @@ def main():
     z=g.merge(m.drop(columns=['Departamento','Municipio']),on='codigo_municipio_4d',validate='one_to_one'); u=raw_polygons(g.crs)
     raw_wide_map(u,g,'land_cover','a. Cobertura y uso de la tierra: denominador agrícola\nMAGA 2025','Clase MAGA Nivel 1','fig07a_maga_land_use_denominator')
     worker_wide_map(z)
-    raw_tall_map(u,g,'agricultural_land','Polígonos MAGA clasificados como territorios agrícolas\nMAGA 2025','Cobertura MAGA','appendix_app03_maga_agricultural_land_polygons')
+    raw_tall_map(u,g,'agricultural_crops','Polígonos MAGA: cultivos y usos agrícolas\nMAGA 2025','Cultivo/uso agrícola','appendix_app03_maga_agricultural_crops_polygons')
     raw_tall_map(u,g,'maize_bean','Polígonos cartografiados de maíz y frijol\nMAGA 2025','Uso/cobertura MAGA','fig08_maga_maize_bean_area')
-    main_map(z,'ag_workers_per_100_agricultural_ha',[-np.inf,25,50,100,200,400,np.inf],['<25','25--50','50--100','100--200','200--400','$\geq$400'],'Trabajadores agrícolas por 100 ha de tierra agrícola cartografiada\nCenso 2018 y MAGA 2025','Trabajadores por 100 ha','fig06b_ine_agriculture_workers_usable_land')
-    exploration(z); table(d,m); municipal_table(m)
+    # The report uses the horizontal land-use/worker pair above; other variants stay in OUTPUT.
+    exploration(z); table(d,m); appendix_dependency_table(d,m); municipal_table(m)
     raw_wide_map(u,g,'land_cover','Cobertura y uso de la tierra: denominador agrícola\nMAGA 2025','Clase MAGA Nivel 1','unused',department_borders=True,destination=DEPARTMENT_EXPORTS/'figura_07a_cobertura_maga_fronteras_departamentales.pdf')
     worker_wide_map(z,department_borders=True,destination=DEPARTMENT_EXPORTS/'figura_07b_trabajadores_por_tierra_fronteras_departamentales.pdf')
-    raw_tall_map(u,g,'agricultural_land','Polígonos MAGA clasificados como territorios agrícolas\nMAGA 2025','Cobertura MAGA','unused',department_borders=True,destination=DEPARTMENT_EXPORTS/'apendice_territorios_agricolas_maga_fronteras_departamentales.pdf')
+    raw_tall_map(u,g,'agricultural_crops','Polígonos MAGA: cultivos y usos agrícolas\nMAGA 2025','Cultivo/uso agrícola','unused',department_borders=True,destination=DEPARTMENT_EXPORTS/'apendice_cultivos_maga_fronteras_departamentales.pdf')
     raw_tall_map(u,g,'maize_bean','Polígonos cartografiados de maíz y frijol\nMAGA 2025','Uso/cobertura MAGA','unused',department_borders=True,destination=DEPARTMENT_EXPORTS/'figura_08_maiz_frijol_fronteras_departamentales.pdf')
     main_map(z,'ag_workers_per_100_agricultural_ha',[-np.inf,25,50,100,200,400,np.inf],['<25','25--50','50--100','100--200','200--400','$\geq$400'],'Trabajadores agrícolas por 100 ha de tierra agrícola cartografiada\nCenso 2018 y MAGA 2025','Trabajadores por 100 ha','unused',department_borders=True,destination=DEPARTMENT_EXPORTS/'figura_07b_municipal_fronteras_departamentales.pdf')
     (OUTPUT/'README.md').write_text("""# Exploración geográfica — cobertura vegetal y uso de la tierra 2025 (MAGA)
@@ -318,9 +417,9 @@ Generado por `python3 code/build_maga_land_use_maps.py`. La fuente cruda permane
 - `01_participacion_tierra_agricola_cartografiada`: tierra de Nivel 1 `2. Territorios agrícolas` como parte del área cartografiada.
 - `02_area_maiz_frijol`: hectáreas de la única clase explícita `Maíz y frijol`.
 - `03_maiz_frijol_participacion_tierra_agricola`: dicha clase como parte de tierra agrícola cartografiada.
-- Los mapas del informe muestran además los polígonos crudos de cobertura/uso y la clase conjunta `Maíz y frijol`, sin agregarlos a municipio.
+- Los mapas del informe muestran polígonos crudos de cultivos/usos agrícolas agrupados sólo para una leyenda legible (maíz y frijol, caña, café, cardamomo, palma, hortalizas/huertos, pastos, hule y otros), además de la clase conjunta `Maíz y frijol`; ningún panel agrega esos polígonos a municipio.
 
-La capa identifica maíz y frijol conjuntamente: no permite separar hectáreas de cada cultivo. Tierra agrícola cartografiada es un denominador de cobertura/uso de suelo, no tierra sembrada, productividad ni tierra económicamente utilizable observada. El SHP no clasifica áreas protegidas como una categoría separada.
+La capa identifica maíz y frijol conjuntamente: no permite separar hectáreas de maíz y frijol. Las agrupaciones de cultivos son exclusivamente cartográficas y conservan los valores originales de `USOT`. Tierra agrícola cartografiada es un denominador de cobertura/uso de suelo, no tierra sembrada, productividad ni tierra económicamente utilizable observada. El SHP no clasifica áreas protegidas como una categoría separada.
 """,encoding='utf-8')
     print(f'MAGA outputs: {len(m)} municipalities; {len(d)} departments; raw polygons={len(u):,}.')
 
