@@ -214,8 +214,12 @@ def municipal_metrics(m):
     x['z_2026_common']=x.rainfall_z_score_vs_1981_2025
     x['impact_composite']=np.maximum(-x.z_2026_common,0)*x.ag_workers_per_100_agricultural_ha
     x['impact_composite_2015']=np.maximum(-x.z_2015_common,0)*x.ag_workers_per_100_agricultural_ha
+    x['impact_agricultural_dependence']=np.maximum(-x.z_2026_common,0)*(x.agricultural_share_pct/100)
+    x['impact_composite_percentile']=100*x.impact_composite.rank(method='average',pct=True)
+    x['impact_agricultural_dependence_percentile']=100*x.impact_agricultural_dependence.rank(method='average',pct=True)
+    x['impact_two_channel_composite']=0.5*(x.impact_composite_percentile+x.impact_agricultural_dependence_percentile)
     if len(x)!=340: raise ValueError('Expected 340 municipal rows in impact table')
-    return x.sort_values(['impact_composite','Departamento','Municipio'],ascending=[False,True,True]).reset_index(drop=True)
+    return x.sort_values(['impact_two_channel_composite','Departamento','Municipio'],ascending=[False,True,True]).reset_index(drop=True)
 
 
 def field_rows(m):
@@ -341,45 +345,54 @@ Departamento / municipio & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\
     out.parent.mkdir(parents=True,exist_ok=True); out.write_text(content,encoding='utf-8')
 
 def municipal_table(m):
-    """Standalone longtable for supplemental.tex; ordered by the 2026 impact index."""
+    """Standalone municipality table: two exposure channels, ordered by their composite."""
     x=municipal_metrics(m)
+    def current_z(value): return rf'\cellcolor{{currentz}}\textbf{{{value:.2f}}}'
+    def land_index(value): return rf'\cellcolor{{landindex}}\underline{{\textbf{{{value:.1f}}}}}'
+    def dependence_index(value): return rf'\cellcolor{{dependencelight}}\underline{{{value:.2f}}}'
+    def combined_index(value): return rf'\cellcolor{{combinedindex}}\underline{{\textbf{{{value:.1f}}}}}'
     rows=[]
     for r in x.itertuples(index=False):
         rows.append(
             f'{tex_escape(r.Municipio)} ({tex_escape(r.Departamento)}) & {r.historical_mean_may_aug_mm:.0f} ({r.historical_sd_may_aug_mm:.0f}) & '
-            f'{r.rain_2026_may_aug_mm:.0f} & \\cellcolor{{currentz}}\\textbf{{{r.z_2026_common:.2f}}} & {r.A:,.0f} & '
-            f'{r.agricultural_land_ha:,.0f} & \\cellcolor{{impactlight}}\\underline{{\\textbf{{{r.impact_composite:.1f}}}}} & '
-            f'{r.z_2015_common:.2f} & {r.impact_composite_2015:.1f} ' + r'\\')
-    content=r"""\begin{landscape}
+            f'{r.rain_2026_may_aug_mm:.0f} & {current_z(r.z_2026_common)} & {r.A:,.0f} / {r.total:,.0f} & '
+            f'{r.agricultural_share_pct:.1f}\\% & {r.agricultural_land_ha:,.0f} & {land_index(r.impact_composite)} & '
+            f'{dependence_index(r.impact_agricultural_dependence)} & {combined_index(r.impact_two_channel_composite)} ' + r'\\')
+    content=r"""\newgeometry{top=0.50in,bottom=0.50in,left=0.60in,right=0.60in,headsep=0.08in,footskip=0.42in}
+\begin{landscape}
 \definecolor{currentz}{HTML}{F9D9D2}
-\definecolor{impactlight}{HTML}{EAD1CD}
+\definecolor{landindex}{HTML}{EAD1CD}
+\definecolor{dependencelight}{HTML}{FCE4E1}
+\definecolor{combinedindex}{HTML}{D99C96}
 \scriptsize
+\setlength{\tabcolsep}{1.4pt}
 \setlength{\LTleft}{0pt plus 1fill}
 \setlength{\LTright}{0pt plus 1fill}
-\begin{longtable}{@{}lrrrrrrrr@{}}
-\caption{Tabla S1. Sequía, exposición agrícola e índice de impacto por municipio, ordenado por índice 2026}\label{tab:municipal-agricultural-drought-summary}\\
+\begin{longtable}{@{}p{1.52in}rrrrrrrrr@{}}
+\caption{Sequía, exposición agrícola e índice compuesto por municipio, ordenado por compuesto 2026}\label{tab:municipal-agricultural-drought-summary}\\
 \toprule
-& \multicolumn{3}{c}{\textbf{Sequía}} & \multicolumn{2}{c}{\textbf{Exposición agrícola}} & \multicolumn{1}{c}{\textbf{\underline{Índice}}} & \multicolumn{2}{c}{\textbf{Comparación 2015}} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-6}\cmidrule(lr){7-7}\cmidrule(lr){8-9}
-Municipio (departamento) & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\2026} & \shortstack{$z_{2026}$\\actual} & \shortstack{Trab. agrícolas\\INE 2018} & \shortstack{ha agrícolas\\MAGA 2025} & \shortstack{\underline{Índice de impacto}\\$[-z_{2026}]_+\times$ trab.\\ag./100 ha} & $z_{2015}$ & \shortstack{Índice\\2015} \\
+& \multicolumn{3}{c}{\textbf{Sequía}} & \multicolumn{3}{c}{\textbf{Exposición agrícola}} & \multicolumn{3}{c}{\textbf{Índices 2026}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+Municipio (dpto.) & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\2026} & \shortstack{$z_{2026}$\\actual} & \shortstack{Trab. agr. /\\Total} & \shortstack{Dependencia\\agrícola} & \shortstack{ha agrícolas\\MAGA 2025} & \shortstack{Índice\\tierra} & \shortstack{Índice\\dependencia} & \shortstack{Compuesto\\(percentil)} \\
 \midrule
 \endfirsthead
-\multicolumn{9}{c}{\small\textit{Tabla S1. Continúa}}\\
+\multicolumn{10}{c}{\small\textit{Cuadro 1. Continúa}}\\
 \toprule
-& \multicolumn{3}{c}{\textbf{Sequía}} & \multicolumn{2}{c}{\textbf{Exposición agrícola}} & \multicolumn{1}{c}{\textbf{\underline{Índice}}} & \multicolumn{2}{c}{\textbf{Comparación 2015}} \\
-\cmidrule(lr){2-4}\cmidrule(lr){5-6}\cmidrule(lr){7-7}\cmidrule(lr){8-9}
-Municipio (departamento) & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\2026} & \shortstack{$z_{2026}$\\actual} & \shortstack{Trab. agrícolas\\INE 2018} & \shortstack{ha agrícolas\\MAGA 2025} & \shortstack{\underline{Índice de impacto}\\$[-z_{2026}]_+\times$ trab.\\ag./100 ha} & $z_{2015}$ & \shortstack{Índice\\2015} \\
+& \multicolumn{3}{c}{\textbf{Sequía}} & \multicolumn{3}{c}{\textbf{Exposición agrícola}} & \multicolumn{3}{c}{\textbf{Índices 2026}} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+Municipio (dpto.) & \shortstack{Media hist.\\(DE)} & \shortstack{Lluvia\\2026} & \shortstack{$z_{2026}$\\actual} & \shortstack{Trab. agr. /\\Total} & \shortstack{Dependencia\\agrícola} & \shortstack{ha agrícolas\\MAGA 2025} & \shortstack{Índice\\tierra} & \shortstack{Índice\\dependencia} & \shortstack{Compuesto\\(percentil)} \\
 \midrule
 \endhead
 \midrule
-\multicolumn{9}{r}{\textit{Continúa en la página siguiente}}\\
+\multicolumn{10}{r}{\textit{Continúa en la página siguiente}}\\
 \endfoot
 \bottomrule
-\multicolumn{9}{@{}p{\linewidth}@{}}{\scriptsize\RaggedRight\textit{Notas.} Fuentes: CHIRPS v3, INE, Censo 2018, cuadro A12.2, y MAGA, cobertura vegetal y uso de la tierra 2025. Media histórica y DE: 1981--2025. Los z-scores de 2015 y 2026 usan la misma referencia local. ``ha agrícolas'' = área MAGA Nivel 1 ``Territorios agrícolas''; no equivale a tierra arable, sembrada o productiva. Índice 2026 = $\max(-z_{2026},0)\times(100A/\mathrm{ha}^{ag})$; índice 2015 aplica el mismo denominador de empleo/cobertura al z-score 2015. Es una clasificación descriptiva, no una estimación de pérdidas ni causal.}\\
+\multicolumn{10}{@{}p{0.96\linewidth}@{}}{\scriptsize\RaggedRight\textit{Notas.} Fuentes: CHIRPS v3, INE, Censo 2018, cuadro A12.2, y MAGA, cobertura vegetal y uso de la tierra 2025. Media histórica y DE: 1981--2025. ``Dependencia agrícola'' = $100A/Total$, donde $A$ es la población ocupada en agricultura, ganadería, silvicultura y pesca y $Total$ incluye la rama no especificada del cuadro oficial. Índice por tierra = $\max(-z_{2026},0)\times(100A/\mathrm{ha}^{ag})$; índice de dependencia = $\max(-z_{2026},0)\times(A/Total)$. Como las unidades difieren, el compuesto (0--100) es el promedio simple de los percentiles municipales de ambos índices. La tabla se ordena por ese compuesto; no es una estimación de pérdidas ni causalidad. ``ha agrícolas'' = polígonos MAGA Nivel 1 ``Territorios agrícolas'', no tierra arable, sembrada o productiva.}\\
 \endlastfoot
 """+'\n'.join(rows)+r"""
 \end{longtable}
 \end{landscape}
+\restoregeometry
 """
     out=PROJECT/'overleaf/assets/tables/table_municipal_agricultural_drought_summary_supplemental.tex'
     out.parent.mkdir(parents=True,exist_ok=True); out.write_text(content,encoding='utf-8')
