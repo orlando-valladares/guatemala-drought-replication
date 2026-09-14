@@ -1,6 +1,6 @@
 # Guatemala drought replication package
 
-This repository is the non-Overleaf replication workspace for the Guatemala May--August 2026 drought analysis. It intentionally excludes the field-report prose, J-PAL template, Overleaf history, raw rasters, survey microdata, and all large source archives.
+This repository is a replication workspace for a Guatemala May--August 2026 drought analysis, removing proprietary information,
 
 ## Current status
 
