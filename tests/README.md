@@ -1,3 +1,5 @@
 # Tests
 
-Regression tests will compare a clean rebuild against the compact CSV checkpoints in `data/derived/`. They are intentionally not added until paths, download inputs and the release scope are finalized.
+Run `make reproduce` first, then `make test`, or simply run `make all`.
+
+`test_reproduction.py` checks released output coverage, the 340-municipality/22-department universe, mutually exclusive drought bands, the component identities of the descriptive index, ordering, and generated figure presence.

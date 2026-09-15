@@ -1,0 +1,15 @@
+variable,level,description,unit,source
+codigo_municipio_4d,municipality,Four-digit municipal identifier.,code,Municipal boundaries/checkpoint
+rainfall_2026_may_aug_mm,municipality/department,Area-weighted May--August 2026 CHIRPS precipitation.,mm,CHIRPS v3
+historical_median_rainfall_mm_1981_2025,municipality/department,Median May--August precipitation in the common 1981--2025 reference.,mm,CHIRPS v3
+z_2026_common_1981_2025,municipality/department,2026 rainfall standardized using the common 1981--2025 historical distribution.,standard deviations,CHIRPS v3
+agricultural_workers_ine_2018,municipality/department,"People occupied in agriculture, livestock, forestry, and fishing.",people,"INE Censo 2018, A12.2"
+total_workers_ine_2018,municipality/department,"Total occupied population, including the unspecified branch.",people,"INE Censo 2018, A12.2"
+agricultural_dependence_pct,municipality/department,100 times agricultural workers divided by total occupied population.,percent,"INE Censo 2018, A12.2"
+mapped_agricultural_land_ha_maga_2025,municipality/department,"Area of MAGA Level 1 ‘Territorios agrícolas’ polygons, aggregated to the unit.",hectares,MAGA land cover/use 2025
+ag_workers_per_100_mapped_agricultural_ha,municipality/department,"100 times agricultural workers divided by mapped agricultural hectares; not productivity, arable land, or crop losses.",workers per 100 ha,INE 2018 + MAGA 2025
+d_dependency_percentile,municipality/department,Empirical percentile of agricultural dependence within the same geographical level.,0--100 percentile,Derived
+p_density_percentile,municipality/department,Empirical percentile of workers per 100 mapped agricultural hectares within the same geographical level.,0--100 percentile,Derived
+E_structural_exposure,municipality/department,Structural agricultural exposure: (d + p) / 2.,0--100 index,Derived
+H_2026,municipality/department,"Drought hazard: max(-z_2026, 0).",standard-deviation magnitude,Derived from CHIRPS v3
+C_impact_2026,municipality/department,Descriptive impact priority: H_2026 times E. It is not a causal estimate or loss forecast.,index,Derived

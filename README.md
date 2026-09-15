@@ -1,21 +1,34 @@
 # Guatemala drought replication package
 
-This repository is a replication workspace for a Guatemala May--August 2026 drought analysis, removing proprietary information,
+This repository is the clean, non-Overleaf replication package for the Guatemala May--August 2026 drought analysis. It contains portable analytical checkpoints, a deterministic build, validation checks, reusable analytical tables, and non-cartographic figures. It intentionally excludes proprietary information, report prose, the J-PAL template, author metadata from the report, Overleaf history, raw rasters, raw land-use polygons, and survey microdata.
 
-## Current status
+## What one command reproduces
 
-This is a reproducibility scaffold, not yet the final public release. It contains:
+```bash
+conda env create -f environment.yml
+conda activate guatemala-drought-replication
+make all
+```
 
-- a frozen snapshot of the analytical scripts in `code/legacy_snapshot/`;
-- compact derived checkpoints in `data/derived/`;
-- a portable data manifest, methods notes, environment specification, and release checklist; and
-- a release hygiene check that confirms no Overleaf or raw geospatial files were added.
+`make all` reads only the tracked CSV checkpoints in `data/derived/`, validates the numerical identities and coverage, then recreates:
 
-The legacy scripts still encode the original personal-workspace paths. Porting them to `config/paths.yml`, adding official download URLs/checksums, and validating a clean-machine rebuild are the next implementation steps. Do not interpret this repository as a claim that those scripts are already one-command reproducible.
+- a municipality-level analysis-ready CSV (340 municipalities);
+- a department-level analysis-ready CSV (22 departments);
+- the 2015/2026 mutually exclusive drought-threshold summary table;
+- a plain-language data dictionary; and
+- three reusable PNG figures showing the 2015--2026 comparison and the relationship between drought hazard and agricultural exposure.
 
-## Scope
+The expected final line is `Release hygiene check passed...`. To recreate outputs without tests, run `make reproduce`; to re-run only validations, run `make test`.
 
-Core analytical outputs use CHIRPS v3 precipitation, Guatemala municipal boundaries, INE Censo 2018 employment data, and MAGA 2025 land-cover polygons. The impact index is descriptive. At each reported geographical level, it is defined as:
+## Reuse the data
+
+Start with [`outputs/tables/data_dictionary.csv`](outputs/tables/data_dictionary.csv), then choose the unit you need:
+
+- [`outputs/tables/municipal_analysis_ready.csv`](outputs/tables/municipal_analysis_ready.csv): every analytical municipality, ordered by the 2026 descriptive index.
+- [`outputs/tables/department_analysis_ready.csv`](outputs/tables/department_analysis_ready.csv): every department, retaining the available author-supplied Oxfam percentages.
+- [`outputs/tables/municipal_drought_thresholds_2015_2026.csv`](outputs/tables/municipal_drought_thresholds_2015_2026.csv): mutually exclusive severity bands. Agricultural workers are summed over municipalities in each band; the department count instead uses each department's own aggregate precipitation z-score.
+
+The portable variables are documented in detail in [`docs/data-sources.md`](docs/data-sources.md). The impact index is descriptive:
 
 ```text
 H_i = max(-z_i, 0)
@@ -25,20 +38,26 @@ E_i = (d_i + p_i) / 2
 C_i = H_i × E_i
 ```
 
-`A` is agricultural employment in the INE 2018 table, `T` is total occupied population, and `ha_ag` is MAGA 2025 mapped agricultural land. `Pctl` is the empirical 0--100 percentile within the displayed municipal or department distribution. `H` measures drought severity, `E` structural agricultural exposure, and `C` their descriptive combination; none estimates crop losses or a causal effect.
+It does not estimate causal effects, crop losses, land productivity, or land tenure. Percentiles are calculated independently within the displayed municipal or department distribution, so cross-level `E` and `C` values must not be compared directly.
 
-## Setup
+## What is and is not reproduced
 
-```bash
-conda env create -f environment.yml
-conda activate guatemala-drought-replication
-make check-release
+The included derived checkpoints faithfully reproduce the published analytical tables and portable alternative-use outputs. The full raw-data pipeline is **not** run by this release because the original CHIRPS rasters, municipal boundary layer, and MAGA polygon file are not redistributed here. The original scripts are retained, clearly marked, in [`code/legacy_snapshot/`](code/legacy_snapshot/); they are audit material, not the public build.
+
+For source acquisition, data limitations, and the path to a future raw rebuild, see [`docs/reproducibility.md`](docs/reproducibility.md) and [`data/manifest.csv`](data/manifest.csv). Before a public release, complete the decisions in [`RELEASE-CHECKLIST.md`](RELEASE-CHECKLIST.md), especially the code/data license and the upstream redistribution review.
+
+## Repository map
+
+```text
+code/legacy_snapshot/   Original audited scripts; not portable or executed
+data/derived/           Small, tracked analytical checkpoints
+data/raw/               Empty local location for authorized raw inputs; ignored by Git
+docs/                   Methods, data provenance, and reproducibility boundaries
+outputs/                Deterministically regenerated tables and figures
+scripts/                Build and release-hygiene checks
+tests/                  Output and numerical-consistency tests
 ```
 
-Place permitted source inputs outside Git under a local `data/raw/` tree following `data/manifest.csv`. The required public/restricted access decisions are in `RELEASE-CHECKLIST.md`.
+## Citation and scope
 
-## Repository boundaries
-
-- No `.tex`, `overleaf/`, report assets, author metadata from the report, or Overleaf Git history belong here.
-- No raw MAGA land-cover shapefile, CHIRPS rasters, ENIGH microdata, MSPAS inputs, or compiled figure PDFs belong here unless their redistribution terms are confirmed.
-- Derived checkpoints are included only to document the current numerical state and support later regression tests.
+Citation metadata is in [`CITATION.cff`](CITATION.cff). No license has been selected yet; reuse is not authorized until the author chooses one. See [`LICENSE.md`](LICENSE.md).

@@ -4,11 +4,7 @@ data/raw/**
 data/reference/**
 !data/reference/README.md
 
-# Generated results and local environments
-outputs/figures/**
-!outputs/figures/.gitkeep
-outputs/tables/**
-!outputs/tables/.gitkeep
+# Local environments and Python cache
 .venv/
 __pycache__/
 *.py[cod]
