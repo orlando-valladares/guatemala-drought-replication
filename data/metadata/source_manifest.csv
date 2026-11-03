@@ -1,0 +1,9 @@
+data_id,raw_location,public_access,period,redistributed,public_release_form,notes
+chirps_v3,data/raw/chirps/,https://www.chc.ucsb.edu/data/chirps3,1981-2026,no,aggregate CSV and figure geography,May-August Primera and monthly 2026 rainfall
+era5_land,data/raw/era5_land/,https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land,1950-2026,no,aggregate national and department CSV,Independent reanalysis robustness product
+ine_census_2018,data/raw/census_2018/,https://censo2018.ine.gob.gt/,2018,no,aggregate municipality and department counts,Industry A and total occupied population
+encovi_2023,data/raw/encovi_2023/,https://www.ine.gob.gt/encovi/,2023,no,department and national FGT0 aggregates,Household records are not included
+maga_land_use_2025,data/raw/maga_2025/,https://www.maga.gob.gt/,2025,no,aggregate agricultural-area metrics and fixed mask outputs,Original vector redistribution not asserted
+modis_mod13a3,data/raw/modis/,https://lpdaac.usgs.gov/products/mod13a3v061/,2001-2026,no,QA-screened department anomalies,August-September fixed agricultural mask
+oxfam_rapid_assessment,external,https://lac.oxfam.org/informe-la-sequia-los-cultivos-y-el-corredor-seco-centroamericano/,2026,no,selected department percentages,Purposive communities; not nationally representative
+guatemala_boundaries,data/raw/boundaries/,source documented in research archive,2026 analytical geography,no,simplified publication GeoJSON,340 Census-linked municipalities and 22 departments

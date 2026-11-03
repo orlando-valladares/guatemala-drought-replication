@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.log
+*.aux
+*.fdb_latexmk
+*.fls
+*.out
+.DS_Store
+
+# Raw inputs stay local. Keep only the documented directory skeleton.
+data/raw/chirps/*
+!data/raw/chirps/.gitkeep
+data/raw/era5_land/*
+!data/raw/era5_land/.gitkeep
+data/raw/modis/*
+!data/raw/modis/.gitkeep
+data/raw/census_2018/*
+!data/raw/census_2018/.gitkeep
+data/raw/encovi_2023/*
+!data/raw/encovi_2023/.gitkeep
+data/raw/maga_2025/*
+!data/raw/maga_2025/.gitkeep
+data/raw/boundaries/*
+!data/raw/boundaries/.gitkeep

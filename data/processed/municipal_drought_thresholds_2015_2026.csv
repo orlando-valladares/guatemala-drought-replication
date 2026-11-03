@@ -1,0 +1,13 @@
+year,z_band,municipalities,agricultural_workers_ine_2018,departments_department_zscore,median_rainfall_mm,median_historical_sd_mm,median_agricultural_dependence_pct,median_ag_workers_per_100_agricultural_ha,top_departmental_concentration
+2026,z < -2.5,105,326599,7,509.118,188.284,32.578,61.253,Chimaltenango 15/16 (94%); Sacatepéquez 15/16 (94%); Chiquimula 10/11 (91%); Suchitepéquez 17/21 (81%)
+2026,-2.5 <= z < -2.0,114,389587,8,472.187,175.705,32.647,44.8,Zacapa 10/11 (91%); Jalapa 6/7 (86%); Jutiapa 12/17 (71%); Quiché 14/21 (67%)
+2026,-2.0 <= z < -1.5,67,307983,4,683.299,229.566,43.282,46.268,Baja Verapaz 5/8 (62%); Alta Verapaz 8/17 (47%); Huehuetenango 15/33 (45%); El Progreso 3/8 (38%)
+2026,-1.5 <= z < -1.0,38,252890,2,688.037,179.056,57.348,37.999,Petén 7/14 (50%); Huehuetenango 15/33 (45%); Izabal 2/5 (40%); Alta Verapaz 5/17 (29%)
+2026,-1.0 <= z < 0,16,116161,1,830.216,200.677,59.227,14.837,Izabal 3/5 (60%); Petén 5/14 (36%); Alta Verapaz 3/17 (18%); Huehuetenango 3/33 (9%)
+2026,z >= 0,0,0,0,,,,,none
+2015,z < -2.5,6,25681,0,499.418,163.34,39.36,23.963,Jutiapa 4/17 (24%); Izabal 1/5 (20%); Chiquimula 1/11 (9%)
+2015,-2.5 <= z < -2.0,57,329241,7,514.254,194.218,45.81,45.169,Chiquimula 10/11 (91%); Zacapa 9/11 (82%); Jalapa 5/7 (71%); Jutiapa 10/17 (59%)
+2015,-2.0 <= z < -1.5,116,500722,9,679.301,225.581,37.02,43.354,Suchitepéquez 19/21 (90%); El Progreso 7/8 (88%); Quiché 16/21 (76%); Sololá 13/19 (68%)
+2015,-1.5 <= z < -1.0,138,461786,6,689.072,173.973,35.177,57.958,Chimaltenango 16/16 (100%); Sacatepéquez 16/16 (100%); Retalhuleu 8/9 (89%); Quetzaltenango 16/24 (67%)
+2015,-1.0 <= z < 0,23,75790,0,816.059,179.004,38.761,45.073,San Marcos 18/30 (60%); Quetzaltenango 5/24 (21%)
+2015,z >= 0,0,0,0,,,,,none

@@ -1,0 +1,38 @@
+variable,unit,definition
+display_order,integer,"Final row order; national first, then balanced score descending."
+national_row,indicator,One for the national aggregate; zero for departments.
+dept_code,INE department code,Validated department identifier; zero is national.
+department,text,National aggregate or department name.
+chirps_rain_2026_mm,mm,CHIRPS v3 May--August 2026 precipitation.
+chirps_hist_mean_mm,mm,"CHIRPS v3 May--August mean, 1981--2025."
+chirps_hist_sd_mm,mm,"CHIRPS v3 May--August sample SD, 1981--2025."
+chirps_z_2026,z score,2026 CHIRPS anomaly using each geography's 1981--2025 mean and SD.
+agricultural_workers,persons,Occupied workers in Census 2018 industry branch A.
+total_workers,persons,"All occupied workers, Census 2018."
+agricultural_dependence_pct,percent,100 times agricultural workers divided by total occupied workers.
+poverty_general_pct,percent,ENCOVI 2023 person-weighted general-poverty FGT0.
+poverty_extreme_pct,percent,ENCOVI 2023 person-weighted extreme-poverty FGT0.
+pct_z,percentile 0--100,Department-only mid-rank percentile; more negative CHIRPS z ranks higher.
+pct_n,percentile 0--100,Department-only mid-rank percentile of agricultural workers.
+pct_s,percentile 0--100,Department-only mid-rank percentile of agricultural dependence.
+pct_p,percentile 0--100,Department-only mid-rank percentile of general-poverty FGT0.
+r_bal,score 0--100,100*(Z/100)^.40*(N/100)^.20*(S/100)^.20*(P/100)^.20.
+oxfam_loss_75_100_pct,percent,Community-reported 75--100% maize loss; purposive coverage only.
+ndvi_cropland_augsep_z_2026,z score,MAGA-restricted August--September 2026 NDVI anomaly using the 2001--2025 mean and sample SD.
+ndvi_cropland_augsep_2026,NDVI,MAGA-restricted mean of valid August and September 2026 MOD13A3.061 NDVI.
+ndvi_cropland_augsep_hist_mean,NDVI,"Mean annual August--September cropland NDVI, 2001--2025, using the fixed MAGA 2025 agricultural mask."
+ndvi_cropland_augsep_hist_sd,NDVI,"Sample SD of annual August--September cropland NDVI, 2001--2025."
+qa_valid_cropland_fraction,share 0--1,Share of mapped agricultural mask with MOD13A3 SummaryQA <= 1 in both August and September 2026.
+era5_rain_z_2026,z score,ERA5-Land May--August 2026 precipitation anomaly using its own 1981--2025 reference.
+era5_temp_2026_c,degrees C,ERA5-Land day-weighted May--August 2026 mean temperature.
+era5_temp_hist_mean,degrees C,"Mean of ERA5-Land May--August seasonal temperature, 1981--2025."
+r_old,score 0--100,Legacy 100*(Z/100)^.50*(N/100)^.25*(S/100)^.25.
+r_poverty_forward,score 0--100,Alternative .30/.20/.15/.35 Z/N/S/P score.
+era5_rain_2026_mm,mm,ERA5-Land May--August 2026 precipitation.
+era5_rain_hist_mean,mm,"ERA5-Land May--August mean, 1981--2025."
+era5_rain_hist_sd,mm,"ERA5-Land May--August sample SD, 1981--2025."
+ndvi_print_status,text,MODIS reconstruction status and fixed-mask/QA scope.
+rank_z,rank,Department rank for CHIRPS severity component.
+rank_n,rank,Department rank for agricultural-worker component.
+rank_s,rank,Department rank for agricultural-dependence component.
+rank_p,rank,Department rank for general-poverty component.

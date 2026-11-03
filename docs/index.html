@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Figures and replication materials for the 2026 Guatemala drought brief.">
+  <title>Guatemala drought 2026 — figures</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="gallery.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#figures">Skip to figures</a>
+
+  <header class="masthead" id="start">
+    <nav class="topnav" aria-label="Primary navigation">
+      <a class="wordmark" href="#start">OV / Research</a>
+      <div class="topnav-links">
+        <a href="downloads/Guatemala_Drought_Draft.pdf">Draft report</a>
+        <a href="https://github.com/orlando-valladares/guatemala-drought-replication">Replication</a>
+        <a href="#method">Methods</a>
+      </div>
+    </nav>
+    <div class="hero">
+      <p class="eyebrow">Guatemala · Primera 2026</p>
+      <h1>Drought intensity and agricultural exposure</h1>
+      <p class="dek">The four publication figures from the descriptive brief, with downloadable PDFs and the analytical data behind each view.</p>
+      <div class="headline-stats" aria-label="Headline results">
+        <div><strong>757.1 mm</strong><span>CHIRPS May–August rainfall</span></div>
+        <div><strong>16 / 22</strong><span>departments below z = −2</span></div>
+        <div><strong>54.6–60.1%</strong><span>agricultural-worker exposure</span></div>
+      </div>
+      <p class="hero-links">
+        <a class="primary-link" href="downloads/Guatemala_Drought_Draft.pdf">Read the draft report</a>
+        <a href="#figure-1">Explore the figures</a>
+      </p>
+    </div>
+  </header>
+
+  <main id="figures">
+    <article class="figure-section" id="figure-1" data-gallery-index="0">
+      <div class="figure-column">
+        <p class="figure-number">01 / 04</p>
+        <h2>Figure 1. Guatemala. Monthly rainfall: 2026, 2015, and historical distribution.</h2>
+        <button class="image-button" type="button" data-image="figures/figure-1-monthly-rainfall.png" data-alt="Monthly Guatemala rainfall in 2026 and 2015 against the historical distribution">
+          <img src="figures/figure-1-monthly-rainfall.png" alt="Monthly Guatemala rainfall in 2026 and 2015 against the historical distribution" loading="eager">
+          <span>Enlarge figure</span>
+        </button>
+        <div class="caption">
+          <p><em>Note.</em> CHIRPS v3 national area-weighted rainfall; final 2026 pentads through September. The September box is split at its midpoint to mark the visual transition from <em>Primera</em> to <em>Postrera</em>.</p>
+        </div>
+        <div class="download-row">
+          <a href="figures/figure-1-monthly-rainfall.pdf">Figure PDF</a>
+          <a href="figures/figure-1-monthly-rainfall.png">Full PNG</a>
+          <a href="data/monthly_rainfall_1981_2026.csv" download>Data CSV</a>
+        </div>
+      </div>
+      <aside class="interpretation">
+        <p class="big-number">757.1 mm<span>CHIRPS rainfall during <em>Primera</em> 2026</span></p>
+        <p>National rainfall was 1.92 standard deviations below the 1981–2025 mean. The monthly view distinguishes the main agricultural season from the September transition into <em>Postrera</em>.</p>
+      </aside>
+    </article>
+
+    <article class="figure-section" id="figure-2" data-gallery-index="1">
+      <div class="figure-column">
+        <p class="figure-number">02 / 04</p>
+        <h2>Figure 2. Guatemala. Distribution of the rainfall anomaly (PDF).</h2>
+        <button class="image-button" type="button" data-image="figures/figure-2-rainfall-anomaly.png" data-alt="Probability-density curves for Guatemala rainfall anomalies in 2015, 2026, and pooled historical years">
+          <img src="figures/figure-2-rainfall-anomaly.png" alt="Probability-density curves for Guatemala rainfall anomalies in 2015, 2026, and pooled historical years" loading="lazy">
+          <span>Enlarge figure</span>
+        </button>
+        <div class="caption">
+          <p><em>Note.</em> CHIRPS <em>Primera</em> leave-one-out anomalies. Solid lines weight agricultural workers; dashed lines show municipalities unweighted. Each density integrates to one.</p>
+        </div>
+        <div class="download-row">
+          <a href="figures/figure-2-rainfall-anomaly.pdf">Figure PDF</a>
+          <a href="figures/figure-2-rainfall-anomaly.png">Full PNG</a>
+          <a href="data/chirps_distribution_curves.csv" download>Curve data</a>
+        </div>
+      </div>
+      <aside class="interpretation">
+        <p class="lead">The 2026 shock was spatially uneven.</p>
+        <p>The agricultural-worker-weighted curve places more mass below the extreme threshold than the unweighted municipal distribution. The distinction separates territorial incidence from workforce exposure.</p>
+      </aside>
+    </article>
+
+    <article class="figure-section" id="figure-3" data-gallery-index="2">
+      <div class="figure-column">
+        <p class="figure-number">03 / 04</p>
+        <h2>Figure 3. Guatemala. Share of territorial units and agricultural workers exposed to extreme drought (z &lt; −2), 1950–2026.</h2>
+        <button class="image-button" type="button" data-image="figures/figure-3-extreme-drought-exposure.png" data-alt="Historical bars for extreme-drought exposure under ERA5-Land and CHIRPS">
+          <img src="figures/figure-3-extreme-drought-exposure.png" alt="Historical bars for extreme-drought exposure under ERA5-Land and CHIRPS" loading="lazy">
+          <span>Enlarge figure</span>
+        </button>
+        <div class="caption">
+          <p><em>Note.</em> ERA5-Land uses 22 departments from 1950; CHIRPS uses 22 departments from 1981. Solid bars show workers and outlined bars show territorial units, applying the fixed 2018 Census worker distribution.</p>
+        </div>
+        <div class="download-row">
+          <a href="figures/figure-3-extreme-drought-exposure.pdf">Figure PDF</a>
+          <a href="figures/figure-3-extreme-drought-exposure.png">Full PNG</a>
+          <a href="data/climate_exposure_annual.csv" download>Data CSV</a>
+        </div>
+      </div>
+      <aside class="interpretation">
+        <p class="big-number">16 / 22<span>extreme-drought departments in both products</span></p>
+        <p>CHIRPS places 54.6% of agricultural workers in extreme-drought departments; ERA5-Land places 60.1%. The products remain separate because their records, grids, and reference distributions differ.</p>
+      </aside>
+    </article>
+
+    <article class="figure-section featured" id="figure-4" data-gallery-index="3">
+      <div class="figure-column">
+        <p class="figure-number">04 / 04</p>
+        <h2>Figure 4. Guatemala. Drought, agricultural employment, poverty, and department prioritization.</h2>
+        <button class="image-button wide" type="button" data-image="figures/figure-4-four-map-assemblage.png" data-alt="Four maps of municipal drought, agricultural employment, poverty, and department prioritization in Guatemala">
+          <img src="figures/figure-4-four-map-assemblage.png" alt="Four maps of municipal drought, agricultural employment, poverty, and department prioritization in Guatemala" loading="lazy">
+          <span>Enlarge figure</span>
+        </button>
+        <div class="caption">
+          <p><em>Note.</em> Panel a maps municipal CHIRPS <em>Primera</em> anomalies. Panels b–d use departments. Agricultural fill is the share of occupied workers in agriculture; proportional circles show worker counts. Poverty is ENCOVI 2023. Priority uses the balanced index reported in Appendix Table A3.</p>
+        </div>
+        <div class="download-row">
+          <a href="figures/figure-4-four-map-assemblage.pdf">Figure PDF</a>
+          <a href="figures/figure-4-four-map-assemblage.png">Full PNG</a>
+          <a href="data/appendix_A3_department.csv" download>Department data</a>
+        </div>
+      </div>
+      <aside class="interpretation">
+        <p class="lead">Hazard, exposure, and poverty are related but distinct.</p>
+        <p>The four panels keep municipal rainfall severity separate from department agricultural structure and poverty. The prioritization score is a transparent relative index—not a probability of loss or an impact estimate.</p>
+      </aside>
+    </article>
+  </main>
+
+  <section class="method-strip" id="method">
+    <div>
+      <p class="eyebrow">Methods and scope</p>
+      <h2>Publication figures backed by downloadable analytical checkpoints.</h2>
+    </div>
+    <div>
+      <p>The public repository contains aggregate processed data and a self-contained Python figure builder. Raw rasters, household records, and restricted source files are not redistributed.</p>
+      <p><a href="https://github.com/orlando-valladares/guatemala-drought-replication#reproduce">Reproduce the figures</a> · <a href="https://github.com/orlando-valladares/guatemala-drought-replication/tree/main/data">Review the data</a></p>
+    </div>
+  </section>
+
+  <footer>
+    <p>Independent analysis by Orlando Valladares · Guatemala, 2026</p>
+    <p><a href="https://github.com/orlando-valladares/guatemala-drought-replication">Code and replication files</a></p>
+  </footer>
+
+  <nav class="figure-controls" aria-label="Figure navigation">
+    <button type="button" id="previous-figure" aria-label="Previous figure">← Previous</button>
+    <span id="figure-indicator" aria-live="polite">01 / 04</span>
+    <button type="button" id="next-figure" aria-label="Next figure">Next →</button>
+  </nav>
+
+  <dialog class="lightbox" id="lightbox" aria-label="Enlarged figure">
+    <button class="lightbox-close" type="button" aria-label="Close enlarged figure">Close ×</button>
+    <button class="lightbox-nav lightbox-previous" type="button" aria-label="Previous figure">←</button>
+    <img src="" alt="Enlarged figure">
+    <button class="lightbox-nav lightbox-next" type="button" aria-label="Next figure">→</button>
+  </dialog>
+</body>
+</html>
