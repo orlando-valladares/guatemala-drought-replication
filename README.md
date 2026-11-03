@@ -13,6 +13,14 @@ This repository accompanies the descriptive brief on Guatemala's 2026 *Primera* 
 
 These are descriptive exposure measures. They are not observed 2026 employment counts, crop-loss estimates, causal effects, or forecasts.
 
+## Figures
+
+| Monthly rainfall | Rainfall-anomaly distribution |
+|---|---|
+| [<img src="out/figures/png/figure-1-monthly-rainfall.png" alt="Monthly rainfall in 2026 and 2015 against the historical distribution" width="440">](out/figures/pdf/figure-1-monthly-rainfall.pdf) | [<img src="out/figures/png/figure-2-rainfall-anomaly.png" alt="Rainfall anomaly probability-density curves" width="440">](out/figures/pdf/figure-2-rainfall-anomaly.pdf) |
+| **Historical extreme-drought exposure** | **Drought, agriculture, poverty, and priority** |
+| [<img src="out/figures/png/figure-3-extreme-drought-exposure.png" alt="Historical territorial and agricultural-worker drought exposure" width="440">](out/figures/pdf/figure-3-extreme-drought-exposure.pdf) | [<img src="out/figures/png/figure-4-four-map-assemblage.png" alt="Four maps of drought, agricultural employment, poverty, and department priority" width="440">](out/figures/pdf/figure-4-four-map-assemblage.pdf) |
+
 ## Start here
 
 | Order | Path | Purpose |
